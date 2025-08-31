@@ -255,6 +255,11 @@ export default function WordChainSolver() {
   }
 
   const handleSaveState = () => {
+    const filename = window.prompt("Enter a filename for your save state:", "word-chain-solver-state.json");
+    if (!filename) {
+      return;
+    }
+
     const stateToSave: AppState = {
       image,
       circles,
@@ -268,7 +273,7 @@ export default function WordChainSolver() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'word-chain-solver-state.json';
+    a.download = filename.endsWith('.json') ? filename : `${filename}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
