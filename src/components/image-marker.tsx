@@ -10,6 +10,7 @@ import { UploadCloud, X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Circle = {
   x: number; // percentage
@@ -229,11 +230,16 @@ export default function ImageMarker() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {getSortedCircles().map((circle, index) => (
+              {getSortedCircles().map((circle, index) => {
+                const clickCount = clickQueue.filter(id => id === circle.id).length;
+                return (
                 <div
                   key={circle.id}
                   data-circle-id={circle.id}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary bg-primary/30 ring-2 ring-white"
+                  className={cn(
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary ring-2 ring-white",
+                    clickCount > 1 ? "bg-accent" : "bg-primary/30"
+                  )}
                   style={{
                     left: `${circle.x * 100}%`,
                     top: `${circle.y * 100}%`,
@@ -247,7 +253,7 @@ export default function ImageMarker() {
                   }}
                   aria-hidden="true"
                 />
-              ))}
+              )})}
             </div>
           </div>
         ) : (
