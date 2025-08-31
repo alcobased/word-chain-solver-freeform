@@ -140,7 +140,13 @@ export default function ImageMarker() {
   };
   
   const handleCircleClick = (clickedCircleId: string) => {
-    setClickQueue(prevQueue => [...prevQueue, clickedCircleId]);
+    setClickQueue(prevQueue => {
+      const clickCount = prevQueue.filter(id => id === clickedCircleId).length;
+      if (clickCount < 2) {
+        return [...prevQueue, clickedCircleId];
+      }
+      return prevQueue;
+    });
   };
 
   const handleClear = () => {
