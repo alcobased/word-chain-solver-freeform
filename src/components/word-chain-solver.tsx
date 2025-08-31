@@ -589,7 +589,7 @@ export default function WordChainSolver() {
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
                     fontSize: `${markerSize * 0.6}px`,
-                    zIndex: index + 1
+                    zIndex: index + 10
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
