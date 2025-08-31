@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, type MouseEvent, type ChangeEvent } from "react";
@@ -6,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud, X } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Settings2 } from "lucide-react";
 
 type Circle = {
   x: number; // percentage
@@ -21,6 +25,7 @@ type ImageState = {
 export default function ImageMarker() {
   const [image, setImage] = useState<ImageState | null>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
+  const [markerSize, setMarkerSize] = useState<number>(16);
   const [isClient, setIsClient] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,16 +35,21 @@ export default function ImageMarker() {
     try {
       const savedImage = localStorage.getItem("imageMarker-image");
       const savedCircles = localStorage.getItem("imageMarker-circles");
+      const savedMarkerSize = localStorage.getItem("imageMarker-markerSize");
       if (savedImage) {
         setImage(JSON.parse(savedImage));
       }
       if (savedCircles) {
         setCircles(JSON.parse(savedCircles));
       }
+      if (savedMarkerSize) {
+        setMarkerSize(JSON.parse(savedMarkerSize));
+      }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
         localStorage.removeItem("imageMarker-image");
         localStorage.removeItem("imageMarker-circles");
+        localStorage.removeItem("imageMarker-markerSize");
     }
   }, []);
 
@@ -52,11 +62,12 @@ export default function ImageMarker() {
           localStorage.removeItem("imageMarker-image");
         }
         localStorage.setItem("imageMarker-circles", JSON.stringify(circles));
+        localStorage.setItem("imageMarker-markerSize", JSON.stringify(markerSize));
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, isClient]);
+  }, [image, circles, markerSize, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -111,12 +122,44 @@ export default function ImageMarker() {
         fileInputRef.current.value = "";
     }
   };
+  
+  const handleMarkerSizeChange = (value: number[]) => {
+    setMarkerSize(value[0]);
+  };
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6">
         <h1 className="text-xl font-semibold font-headline">Image Marker</h1>
         <div className="flex items-center gap-2 md:gap-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" disabled={!image}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56" align="end">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Controls</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Adjust marker settings.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="marker-size">Marker Size ({markerSize}px)</Label>
+                  <Slider
+                    id="marker-size"
+                    min={4}
+                    max={64}
+                    step={2}
+                    value={[markerSize]}
+                    onValueChange={handleMarkerSizeChange}
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button onClick={handleClear} variant="ghost" size="sm" disabled={!image}>
             <X className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Clear</span>
@@ -148,10 +191,12 @@ export default function ImageMarker() {
               {circles.map((circle, index) => (
                 <div
                   key={index}
-                  className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary bg-primary/30 ring-2 ring-white"
+                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary bg-primary/30 ring-2 ring-white"
                   style={{
                     left: `${circle.x * 100}%`,
                     top: `${circle.y * 100}%`,
+                    width: `${markerSize}px`,
+                    height: `${markerSize}px`,
                   }}
                   aria-hidden="true"
                 ></div>
