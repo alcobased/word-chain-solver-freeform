@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X } from "lucide-react";
+import { UploadCloud, X, Undo2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
@@ -178,6 +178,10 @@ export default function ImageMarker() {
     }))
   }
 
+  const handleUndoClick = () => {
+    setClickQueue(prevQueue => prevQueue.slice(0, -1));
+  };
+
   const getSortedCircles = () => {
     const sortedIds = Object.keys(circles).sort((a, b) => {
       const lastIndexA = clickQueue.lastIndexOf(a);
@@ -234,6 +238,10 @@ export default function ImageMarker() {
                         placeholder="Set for last marker"
                     />
                 </div>
+                <Button onClick={handleUndoClick} variant="outline" size="sm" disabled={clickQueue.length === 0}>
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Undo
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -306,3 +314,5 @@ export default function ImageMarker() {
     </div>
   );
 }
+
+  
