@@ -179,6 +179,21 @@ export default function ImageMarker() {
   }
 
   const handleUndoClick = () => {
+    if (clickQueue.length === 0) return;
+
+    const lastClickedId = clickQueue[clickQueue.length - 1];
+    const clickCount = clickQueue.filter(id => id === lastClickedId).length;
+
+    if (clickCount === 1) {
+      // If it's the first click on this circle, remove the circle.
+      setCircles(prevCircles => {
+        const newCircles = { ...prevCircles };
+        delete newCircles[lastClickedId];
+        return newCircles;
+      });
+    }
+
+    // In both cases (1 or 2 clicks), remove the last entry from the queue.
     setClickQueue(prevQueue => prevQueue.slice(0, -1));
   };
 
@@ -314,5 +329,3 @@ export default function ImageMarker() {
     </div>
   );
 }
-
-  
