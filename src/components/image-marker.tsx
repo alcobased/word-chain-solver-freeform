@@ -12,10 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Settings2 } from "lucide-react";
 
 type Circle = {
-  id: string;
   x: number; // percentage
   y: number; // percentage
 };
+
+type Circles = Record<string, Circle>;
 
 type ImageState = {
   src: string;
@@ -25,7 +26,7 @@ type ImageState = {
 
 export default function ImageMarker() {
   const [image, setImage] = useState<ImageState | null>(null);
-  const [circles, setCircles] = useState<Circle[]>([]);
+  const [circles, setCircles] = useState<Circles>({});
   const [clickQueue, setClickQueue] = useState<string[]>([]);
   const [markerSize, setMarkerSize] = useState<number>(16);
   const [isClient, setIsClient] = useState(false);
@@ -91,7 +92,7 @@ export default function ImageMarker() {
                 width: img.naturalWidth,
                 height: img.naturalHeight,
             });
-            setCircles([]);
+            setCircles({});
             setClickQueue([]);
         };
         img.src = dataUrl;
@@ -127,25 +128,23 @@ export default function ImageMarker() {
     const xPercent = relativeX / rect.width;
     const yPercent = relativeY / rect.height;
 
-    const newCircle: Circle = {
-      id: crypto.randomUUID(),
-      x: xPercent,
-      y: yPercent
-    };
+    const newCircleId = crypto.randomUUID();
 
-    setCircles(prevCircles => [...prevCircles, newCircle]);
+    setCircles(prevCircles => ({
+      ...prevCircles,
+      [newCircleId]: { x: xPercent, y: yPercent }
+    }));
+    
+    setClickQueue(prevQueue => [...prevQueue, newCircleId]);
   };
   
-  const handleCircleClick = (clickedCircle: Circle) => {
-    setClickQueue(prevQueue => {
-      const newQueue = prevQueue.filter(id => id !== clickedCircle.id);
-      return [...newQueue, clickedCircle.id];
-    });
+  const handleCircleClick = (clickedCircleId: string) => {
+    setClickQueue(prevQueue => [...prevQueue, clickedCircleId]);
   };
 
   const handleClear = () => {
     setImage(null);
-    setCircles([]);
+    setCircles({});
     setClickQueue([]);
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -156,16 +155,18 @@ export default function ImageMarker() {
     setMarkerSize(value[0]);
   };
 
-  const sortedCircles = [...circles].sort((a, b) => {
-    const aInQueue = clickQueue.includes(a.id);
-    const bInQueue = clickQueue.includes(b.id);
-    if (aInQueue && !bInQueue) return 1;
-    if (!aInQueue && bInQueue) return -1;
-    if (aInQueue && bInQueue) {
-      return clickQueue.indexOf(a.id) - clickQueue.indexOf(b.id);
-    }
-    return 0;
-  });
+  const getSortedCircles = () => {
+    const sortedIds = Object.keys(circles).sort((a, b) => {
+      const lastIndexA = clickQueue.lastIndexOf(a);
+      const lastIndexB = clickQueue.lastIndexOf(b);
+      return lastIndexA - lastIndexB;
+    });
+
+    return sortedIds.map(id => ({
+      id,
+      ...circles[id]
+    }));
+  }
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -228,7 +229,7 @@ export default function ImageMarker() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {sortedCircles.map((circle) => (
+              {getSortedCircles().map((circle, index) => (
                 <div
                   key={circle.id}
                   data-circle-id={circle.id}
@@ -238,11 +239,11 @@ export default function ImageMarker() {
                     top: `${circle.y * 100}%`,
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
-                    zIndex: clickQueue.includes(circle.id) ? clickQueue.indexOf(circle.id) + 1 : 0
+                    zIndex: index + 1
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCircleClick(circle);
+                    handleCircleClick(circle.id);
                   }}
                   aria-hidden="true"
                 />
