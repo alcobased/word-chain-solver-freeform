@@ -26,6 +26,7 @@ type ImageState = {
 export default function ImageMarker() {
   const [image, setImage] = useState<ImageState | null>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
+  const [clickQueue, setClickQueue] = useState<string[]>([]);
   const [markerSize, setMarkerSize] = useState<number>(16);
   const [isClient, setIsClient] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -36,12 +37,17 @@ export default function ImageMarker() {
     try {
       const savedImage = localStorage.getItem("imageMarker-image");
       const savedCircles = localStorage.getItem("imageMarker-circles");
+      const savedClickQueue = localStorage.getItem("imageMarker-clickQueue");
       const savedMarkerSize = localStorage.getItem("imageMarker-markerSize");
+      
       if (savedImage) {
         setImage(JSON.parse(savedImage));
       }
       if (savedCircles) {
         setCircles(JSON.parse(savedCircles));
+      }
+      if (savedClickQueue) {
+        setClickQueue(JSON.parse(savedClickQueue));
       }
       if (savedMarkerSize) {
         setMarkerSize(JSON.parse(savedMarkerSize));
@@ -50,6 +56,7 @@ export default function ImageMarker() {
         console.error("Failed to load data from localStorage", error);
         localStorage.removeItem("imageMarker-image");
         localStorage.removeItem("imageMarker-circles");
+        localStorage.removeItem("imageMarker-clickQueue");
         localStorage.removeItem("imageMarker-markerSize");
     }
   }, []);
@@ -63,12 +70,13 @@ export default function ImageMarker() {
           localStorage.removeItem("imageMarker-image");
         }
         localStorage.setItem("imageMarker-circles", JSON.stringify(circles));
+        localStorage.setItem("imageMarker-clickQueue", JSON.stringify(clickQueue));
         localStorage.setItem("imageMarker-markerSize", JSON.stringify(markerSize));
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, markerSize, isClient]);
+  }, [image, circles, clickQueue, markerSize, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -84,6 +92,7 @@ export default function ImageMarker() {
                 height: img.naturalHeight,
             });
             setCircles([]);
+            setClickQueue([]);
         };
         img.src = dataUrl;
       };
@@ -128,15 +137,16 @@ export default function ImageMarker() {
   };
   
   const handleCircleClick = (clickedCircle: Circle) => {
-    setCircles(prevCircles => {
-      const otherCircles = prevCircles.filter(c => c.id !== clickedCircle.id);
-      return [...otherCircles, clickedCircle];
+    setClickQueue(prevQueue => {
+      const newQueue = prevQueue.filter(id => id !== clickedCircle.id);
+      return [...newQueue, clickedCircle.id];
     });
   };
 
   const handleClear = () => {
     setImage(null);
     setCircles([]);
+    setClickQueue([]);
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
@@ -145,6 +155,17 @@ export default function ImageMarker() {
   const handleMarkerSizeChange = (value: number[]) => {
     setMarkerSize(value[0]);
   };
+
+  const sortedCircles = [...circles].sort((a, b) => {
+    const aInQueue = clickQueue.includes(a.id);
+    const bInQueue = clickQueue.includes(b.id);
+    if (aInQueue && !bInQueue) return 1;
+    if (!aInQueue && bInQueue) return -1;
+    if (aInQueue && bInQueue) {
+      return clickQueue.indexOf(a.id) - clickQueue.indexOf(b.id);
+    }
+    return 0;
+  });
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -207,7 +228,7 @@ export default function ImageMarker() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {circles.map((circle) => (
+              {sortedCircles.map((circle) => (
                 <div
                   key={circle.id}
                   data-circle-id={circle.id}
@@ -217,6 +238,7 @@ export default function ImageMarker() {
                     top: `${circle.y * 100}%`,
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
+                    zIndex: clickQueue.includes(circle.id) ? clickQueue.indexOf(circle.id) + 1 : 0
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
