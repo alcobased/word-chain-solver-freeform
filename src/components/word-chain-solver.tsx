@@ -6,12 +6,14 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Undo2, BookText, Save, FolderOpen } from "lucide-react";
+import { UploadCloud, X, Undo2, BookText, Save, FolderOpen, Wand2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { solveWordChain, SolveChainInput, SolveChainOutput } from "@/ai/flows/solve-chain-flow";
+import { useToast } from "@/hooks/use-toast";
 
 type Circle = {
   x: number; // percentage
@@ -44,6 +46,8 @@ export default function WordChainSolver() {
   const [wordList, setWordList] = useState<string>("");
   const [wordConnections, setWordConnections] = useState<Record<string, string[]>>({});
   const [isClient, setIsClient] = useState(false);
+  const [isSolving, setIsSolving] = useState(false);
+  const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadStateInputRef = useRef<HTMLInputElement>(null);
@@ -241,14 +245,11 @@ export default function WordChainSolver() {
     console.log("Word Connections:", newConnections);
   }
 
-  const getSortedCircles = () => {
-    const sortedIds = Object.keys(circles).sort((a, b) => {
-      const lastIndexA = clickQueue.lastIndexOf(a);
-      const lastIndexB = clickQueue.lastIndexOf(b);
-      return lastIndexA - lastIndexB;
-    });
-
-    return sortedIds.map(id => ({
+  const getSortedCirclesWithIds = () => {
+    // Create a set of unique IDs from the click queue to define the order.
+    const orderedUniqueIds = [...new Set(clickQueue)];
+  
+    return orderedUniqueIds.map(id => ({
       id,
       ...circles[id]
     }));
@@ -313,6 +314,68 @@ export default function WordChainSolver() {
       }
     }
   };
+
+  const handleFindSolution = async () => {
+    const orderedCircles = getSortedCirclesWithIds();
+    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+
+    if (orderedCircles.length === 0 || words.length === 0 || Object.keys(wordConnections).length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Find Solution",
+        description: "Please add markers, a word list, and process the list before finding a solution.",
+      });
+      return;
+    }
+    
+    setIsSolving(true);
+    try {
+      const input: SolveChainInput = {
+        circles: orderedCircles.map(({ id, x, y, char }) => ({ id, x, y, char: char || '' })),
+        words: words,
+        connections: wordConnections
+      };
+      const result: SolveChainOutput = await solveWordChain(input);
+      
+      if (result.solution.length > 0) {
+        const solutionString = result.solution.join('');
+        const updatedCircles = { ...circles };
+        
+        orderedCircles.forEach((circle, index) => {
+            if(index < solutionString.length) {
+                updatedCircles[circle.id] = {
+                    ...updatedCircles[circle.id],
+                    char: solutionString[index]
+                };
+            }
+        });
+
+        setCircles(updatedCircles);
+
+        toast({
+            title: "Solution Found!",
+            description: result.reasoning,
+        });
+
+      } else {
+        toast({
+            variant: "destructive",
+            title: "No Solution Found",
+            description: result.reasoning,
+        });
+      }
+
+    } catch (error) {
+      console.error("Failed to find solution:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred while trying to find a solution.",
+      });
+    } finally {
+      setIsSolving(false);
+    }
+  };
   
   const lastClickedId = clickQueue.length > 0 ? clickQueue[clickQueue.length - 1] : null;
   const lastCircleChar = lastClickedId ? circles[lastClickedId]?.char : '';
@@ -323,6 +386,10 @@ export default function WordChainSolver() {
         <h1 className="text-xl font-semibold font-headline">Word Chain Solver</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
+            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image}>
+                <Wand2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
+            </Button>
             <Button onClick={handleSaveState} variant="outline" size="sm" disabled={!image}>
                 <Save className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Save</span>
@@ -431,7 +498,7 @@ export default function WordChainSolver() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {getSortedCircles().map((circle, index) => {
+              {getSortedCirclesWithIds().map((circle, index) => {
                 const clickCount = clickQueue.filter(id => id === circle.id).length;
                 return (
                 <div
