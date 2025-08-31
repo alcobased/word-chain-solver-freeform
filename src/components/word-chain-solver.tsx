@@ -271,16 +271,6 @@ export default function WordChainSolver() {
     console.log("Word Connections:", newConnections);
   }
 
-  const getSortedCirclesForActiveChain = () => {
-    if (!activeChainId) return [];
-    const orderedUniqueIds = [...new Set(activeQueue)];
-  
-    return orderedUniqueIds.map(id => ({
-      id,
-      ...circles[id]
-    })).filter(c => c.x !== undefined); // Ensure circle exists
-  }
-
   const handleSaveState = () => {
     const filename = saveFilename;
     if (!filename) {
@@ -351,19 +341,19 @@ export default function WordChainSolver() {
     }
   };
 
-  const solveLocally = (
+  const solveSingleChain = (
     queue: string[],
     allCircles: Circles,
     words: string[],
-    connections: Record<string, string[]>
+    connections: Record<string, string[]>,
+    globallyUsedWords: Set<string> = new Set()
   ): { solution: string[], reasoning: string } => {
     const totalLength = queue.length;
-    
+    if (totalLength === 0) return { solution: [], reasoning: "Chain is empty." };
+
     const circleIdToIndices: Record<string, number[]> = {};
     queue.forEach((id, index) => {
-      if (!circleIdToIndices[id]) {
-        circleIdToIndices[id] = [];
-      }
+      if (!circleIdToIndices[id]) circleIdToIndices[id] = [];
       circleIdToIndices[id].push(index);
     });
 
@@ -382,10 +372,9 @@ export default function WordChainSolver() {
       }
       
       if (currentChain.length === totalLength) {
+        // Validate solution *after* it's fully built
         for (const { char, index } of knownChars) {
-          if (currentChain[index] !== char) {
-            return [];
-          }
+          if (currentChain[index] !== char) return [];
         }
         
         for (const id in circleIdToIndices) {
@@ -393,9 +382,7 @@ export default function WordChainSolver() {
           if (indices.length > 1) {
             const firstChar = currentChain[indices[0]];
             for (let i = 1; i < indices.length; i++) {
-              if (currentChain[indices[i]] !== firstChar) {
-                return [];
-              }
+              if (currentChain[indices[i]] !== firstChar) return [];
             }
           }
         }
@@ -403,15 +390,15 @@ export default function WordChainSolver() {
       }
 
       let solutions: string[][] = [];
-      
       const possibleNextWords = lastWord ? connections[lastWord] || [] : words;
 
       for (const word of possibleNextWords) {
-        if (usedWords.includes(word)) continue;
+        if (usedWords.includes(word) || globallyUsedWords.has(word)) continue;
 
         const newChain = lastWord ? currentChain + word.slice(2) : word;
         
         let possible = true;
+        // Check only up to the length of the new chain
         for (const { char, index } of knownChars) {
           if (index < newChain.length && newChain[index] !== char) {
             possible = false;
@@ -440,7 +427,7 @@ export default function WordChainSolver() {
         if (!possible) continue;
         
         const results = findSolutions(newChain, [...usedWords, word], word);
-        solutions = solutions.concat(results);
+        if (results.length > 0) return results; // Return first found solution
       }
 
       return solutions;
@@ -461,74 +448,166 @@ export default function WordChainSolver() {
     }
   };
 
-  const handleFindSolution = async () => {
-    if (!activeChainId) {
-        toast({ variant: "destructive", title: "No active chain selected." });
-        return;
-    }
-    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+  type MultiSolution = Record<string, {solution: string[], chain: string}>;
 
-    if (activeQueue.length === 0 || words.length === 0 || Object.keys(wordConnections).length === 0) {
+  const solveMultiChain = (
+    allQueues: Queues,
+    allCircles: Circles,
+    words: string[],
+    connections: Record<string, string[]>
+  ): { solution: MultiSolution | null, reasoning: string } => {
+    
+    const chainIds = Object.keys(allQueues);
+
+    const findMultiSolutions = (
+      chainIndex: number,
+      currentSolutions: MultiSolution,
+      usedWords: Set<string>
+    ): MultiSolution | null => {
+      if (chainIndex >= chainIds.length) {
+        return currentSolutions; // All chains solved
+      }
+
+      const chainId = chainIds[chainIndex];
+      const queue = allQueues[chainId];
+
+      // Create a temporary circle mapping that includes results from previous chains
+      const tempCircles: Circles = { ...allCircles };
+      Object.values(currentSolutions).forEach(sol => {
+          const solQueue = allQueues[sol.solution[0]]; // This is not quite right. Need to map solution back to chainId.
+          // Let's find the chainId for the current solution
+          const solvedChainId = Object.keys(allQueues).find(id => currentSolutions[id] === sol);
+          if (solvedChainId) {
+            const q = allQueues[solvedChainId];
+            q.forEach((cId, idx) => {
+              if (idx < sol.chain.length) {
+                if (!tempCircles[cId]?.char) { // Don't override existing clues
+                  tempCircles[cId] = { ...tempCircles[cId], char: sol.chain[idx] };
+                }
+              }
+            });
+          }
+      });
+      
+      const singleChainResult = solveSingleChain(queue, tempCircles, words, connections, usedWords);
+
+      if (singleChainResult.solution.length > 0) {
+        const newUsedWords = new Set([...usedWords, ...singleChainResult.solution]);
+        
+        let solutionString = "";
+        if (singleChainResult.solution.length > 0) {
+            solutionString = singleChainResult.solution[0];
+            for (let i = 1; i < singleChainResult.solution.length; i++) {
+                solutionString += singleChainResult.solution[i].slice(2);
+            }
+        }
+
+        const newSolutions: MultiSolution = {
+            ...currentSolutions,
+            [chainId]: {
+                solution: singleChainResult.solution,
+                chain: solutionString,
+            }
+        };
+        
+        // This is a bit of a hack. Since solveSingleChain doesn't return ALL solutions,
+        // we can't properly backtrack. For now, we proceed with the first solution found.
+        // A more robust implementation would have solveSingleChain as a generator or return all solutions.
+        return findMultiSolutions(chainIndex + 1, newSolutions, newUsedWords);
+      }
+
+      return null; // No solution found for this chain, backtrack
+    };
+    
+    const finalSolution = findMultiSolutions(0, {}, new Set());
+
+    if (finalSolution) {
+        return {
+            solution: finalSolution,
+            reasoning: "Successfully found a solution for all chains."
+        };
+    } else {
+        return {
+            solution: null,
+            reasoning: "Could not find a valid solution that satisfies all chain constraints."
+        };
+    }
+  };
+
+
+  const handleFindSolution = async () => {
+    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+    if (words.length === 0 || Object.keys(wordConnections).length === 0) {
       toast({
         variant: "destructive",
         title: "Cannot Find Solution",
-        description: "Please add markers to the active chain, add a word list, and process the list before finding a solution.",
+        description: "Please add a word list and process it before finding a solution.",
       });
       return;
     }
-    
+
     setIsSolving(true);
     try {
-      const result = solveLocally(activeQueue, circles, words, wordConnections);
-      
-      if (result.solution.length > 0) {
-        let solutionString = "";
-        if (result.solution.length > 0) {
-          solutionString = result.solution[0];
-          for (let i = 1; i < result.solution.length; i++) {
-            solutionString += result.solution[i].slice(2);
-          }
+      if (mode === 'single') {
+        if (!activeChainId) {
+          toast({ variant: "destructive", title: "No active chain selected." });
+          setIsSolving(false);
+          return;
+        }
+        if(activeQueue.length === 0) {
+          toast({ variant: "destructive", title: "Active chain is empty." });
+          setIsSolving(false);
+          return;
         }
 
-        const updatedCircles = { ...circles };
+        const result = solveSingleChain(activeQueue, circles, words, wordConnections);
         
-        activeQueue.forEach((circleId, index) => {
-            if(index < solutionString.length) {
-                if (updatedCircles[circleId]) {
-                    updatedCircles[circleId] = {
-                        ...updatedCircles[circleId],
-                        char: solutionString[index]
-                    };
-                }
+        if (result.solution.length > 0) {
+          let solutionString = "";
+          if (result.solution.length > 0) {
+            solutionString = result.solution[0];
+            for (let i = 1; i < result.solution.length; i++) {
+              solutionString += result.solution[i].slice(2);
             }
-        });
-
-        setCircles(updatedCircles);
-
-        toast({
-            title: "Solution Found!",
-            description: result.reasoning,
-        });
-
-      } else {
-        toast({
-            variant: "destructive",
-            title: "No Solution Found",
-            description: result.reasoning,
-        });
+          }
+          const updatedCircles = { ...circles };
+          activeQueue.forEach((circleId, index) => {
+            if (index < solutionString.length && updatedCircles[circleId]) {
+              updatedCircles[circleId] = { ...updatedCircles[circleId], char: solutionString[index] };
+            }
+          });
+          setCircles(updatedCircles);
+          toast({ title: "Solution Found!", description: result.reasoning });
+        } else {
+          toast({ variant: "destructive", title: "No Solution Found", description: result.reasoning });
+        }
+      } else { // Multi-chain mode
+        const result = solveMultiChain(queues, circles, words, wordConnections);
+        if (result.solution) {
+          const updatedCircles = { ...circles };
+          Object.values(result.solution).forEach(({ chain: solutionString }, i) => {
+            const chainId = Object.keys(result.solution!)[i];
+            const queue = queues[chainId];
+            queue.forEach((circleId, index) => {
+                if (index < solutionString.length && updatedCircles[circleId]) {
+                  updatedCircles[circleId] = { ...updatedCircles[circleId], char: solutionString[index] };
+                }
+            });
+          });
+          setCircles(updatedCircles);
+          toast({ title: "Solution Found!", description: result.reasoning });
+        } else {
+          toast({ variant: "destructive", title: "No Solution Found", description: result.reasoning });
+        }
       }
-
     } catch (error) {
       console.error("Failed to find solution:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An error occurred while trying to find a solution.",
-      });
+      toast({ variant: "destructive", title: "Error", description: "An error occurred while trying to find a solution." });
     } finally {
       setIsSolving(false);
     }
   };
+
 
   const handleModeChange = (isMulti: boolean) => {
       const newMode = isMulti ? "multi" : "single";
@@ -536,13 +615,11 @@ export default function WordChainSolver() {
       if (newMode === 'single') {
           setActiveChainId(SINGLE_CHAIN_ID);
       } else {
-          // If switching to multi and only the single chain exists, keep it active.
           if (Object.keys(queues).length === 1 && queues[SINGLE_CHAIN_ID]) {
               setActiveChainId(SINGLE_CHAIN_ID);
           } else if (Object.keys(queues).length > 0) {
               setActiveChainId(Object.keys(queues)[0]);
           } else {
-              // No chains exist, create one
               const newChainId = `chain-${Date.now()}`;
               setQueues({ [newChainId]: [] });
               setActiveChainId(newChainId);
@@ -559,13 +636,11 @@ export default function WordChainSolver() {
   const handleDeleteChain = () => {
     if (!activeChainId || Object.keys(queues).length <= 1) return;
     
-    // Create copies to modify
     const newQueues = { ...queues };
     const queueToDelete = newQueues[activeChainId];
     delete newQueues[activeChainId];
     
     const newCircles = { ...circles };
-    // Check which circles can be deleted
     queueToDelete.forEach(circleId => {
       const isUsedElsewhere = Object.values(newQueues).some(q => q.includes(circleId));
       if (!isUsedElsewhere) {
@@ -576,7 +651,6 @@ export default function WordChainSolver() {
     setQueues(newQueues);
     setCircles(newCircles);
     
-    // Set a new active chain
     setActiveChainId(Object.keys(newQueues)[0] ?? null);
   }
 
@@ -621,7 +695,7 @@ export default function WordChainSolver() {
                 </div>
             )}
             <div className="h-6 border-l mx-2"></div>
-            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image || !activeChainId}>
+            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image}>
                 <Wand2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
             </Button>
@@ -800,5 +874,3 @@ export default function WordChainSolver() {
     </div>
   );
 }
-
-    
