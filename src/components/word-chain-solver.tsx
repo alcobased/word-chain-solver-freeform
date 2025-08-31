@@ -12,7 +12,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
-import { solveWordChain, SolveChainInput, SolveChainOutput } from "@/ai/flows/solve-chain-flow";
 import { useToast } from "@/hooks/use-toast";
 
 type Circle = {
@@ -315,6 +314,77 @@ export default function WordChainSolver() {
     }
   };
 
+  const solveLocally = (
+    queue: string[],
+    allCircles: Circles,
+    words: string[],
+    connections: Record<string, string[]>
+  ): { solution: string[], reasoning: string } => {
+    const totalLength = queue.length;
+    const knownChars = queue.map((id, index) => ({
+      char: allCircles[id]?.char,
+      index
+    })).filter(item => item.char);
+
+    const findSolutions = (
+      currentChain: string,
+      usedWords: string[],
+      lastWord: string | null
+    ): string[][] => {
+      if (currentChain.length > totalLength) {
+        return [];
+      }
+      
+      if (currentChain.length === totalLength) {
+        for (const { char, index } of knownChars) {
+          if (currentChain[index] !== char) {
+            return [];
+          }
+        }
+        return [usedWords];
+      }
+
+      let solutions: string[][] = [];
+      
+      const possibleNextWords = lastWord ? connections[lastWord] || [] : words;
+
+      for (const word of possibleNextWords) {
+        if (usedWords.includes(word)) continue;
+
+        const newChain = lastWord ? currentChain + word.slice(2) : word;
+        
+        // Pre-check known characters
+        let possible = true;
+        for (const { char, index } of knownChars) {
+          if (index < newChain.length && newChain[index] !== char) {
+            possible = false;
+            break;
+          }
+        }
+        if (!possible) continue;
+        
+        const results = findSolutions(newChain, [...usedWords, word], word);
+        solutions = solutions.concat(results);
+      }
+
+      return solutions;
+    };
+    
+    const solutions = findSolutions("", [], null);
+    
+    if (solutions.length > 0) {
+      return {
+        solution: solutions[0],
+        reasoning: `Found a solution with the word chain: ${solutions[0].join(" -> ")}`,
+      };
+    } else {
+      return {
+        solution: [],
+        reasoning: "No valid word chain could be found to fit the puzzle constraints.",
+      };
+    }
+  };
+
   const handleFindSolution = async () => {
     const orderedCircles = getSortedCirclesWithIds();
     const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
@@ -330,23 +400,28 @@ export default function WordChainSolver() {
     
     setIsSolving(true);
     try {
-      const input: SolveChainInput = {
-        circles: orderedCircles.map(({ id, x, y, char }) => ({ id, x, y, char: char || '' })),
-        words: words,
-        connections: wordConnections
-      };
-      const result: SolveChainOutput = await solveWordChain(input);
+      const result = solveLocally(clickQueue, circles, words, wordConnections);
       
       if (result.solution.length > 0) {
-        const solutionString = result.solution.join('');
+        let solutionString = "";
+        if (result.solution.length > 0) {
+          solutionString = result.solution[0];
+          for (let i = 1; i < result.solution.length; i++) {
+            solutionString += result.solution[i].slice(2);
+          }
+        }
+
         const updatedCircles = { ...circles };
+        const uniqueOrderedIds = [...new Set(clickQueue)];
         
-        orderedCircles.forEach((circle, index) => {
+        clickQueue.forEach((circleId, index) => {
             if(index < solutionString.length) {
-                updatedCircles[circle.id] = {
-                    ...updatedCircles[circle.id],
-                    char: solutionString[index]
-                };
+                if (updatedCircles[circleId]) {
+                    updatedCircles[circleId] = {
+                        ...updatedCircles[circleId],
+                        char: solutionString[index]
+                    };
+                }
             }
         });
 
