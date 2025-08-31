@@ -223,7 +223,7 @@ export default function ImageMarker() {
                     handleCircleClick(circle);
                   }}
                   aria-hidden="true"
-                ></div>
+                />
               ))}
             </div>
           </div>
