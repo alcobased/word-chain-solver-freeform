@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
 type Circle = {
   x: number; // percentage
@@ -31,6 +32,7 @@ export default function ImageMarker() {
   const [circles, setCircles] = useState<Circles>({});
   const [clickQueue, setClickQueue] = useState<string[]>([]);
   const [markerSize, setMarkerSize] = useState<number>(16);
+  const [wordList, setWordList] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +44,7 @@ export default function ImageMarker() {
       const savedCircles = localStorage.getItem("imageMarker-circles");
       const savedClickQueue = localStorage.getItem("imageMarker-clickQueue");
       const savedMarkerSize = localStorage.getItem("imageMarker-markerSize");
+      const savedWordList = localStorage.getItem("imageMarker-wordList");
       
       if (savedImage) {
         setImage(JSON.parse(savedImage));
@@ -55,12 +58,16 @@ export default function ImageMarker() {
       if (savedMarkerSize) {
         setMarkerSize(JSON.parse(savedMarkerSize));
       }
+      if (savedWordList) {
+        setWordList(savedWordList);
+      }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
         localStorage.removeItem("imageMarker-image");
         localStorage.removeItem("imageMarker-circles");
         localStorage.removeItem("imageMarker-clickQueue");
         localStorage.removeItem("imageMarker-markerSize");
+        localStorage.removeItem("imageMarker-wordList");
     }
   }, []);
 
@@ -75,11 +82,12 @@ export default function ImageMarker() {
         localStorage.setItem("imageMarker-circles", JSON.stringify(circles));
         localStorage.setItem("imageMarker-clickQueue", JSON.stringify(clickQueue));
         localStorage.setItem("imageMarker-markerSize", JSON.stringify(markerSize));
+        localStorage.setItem("imageMarker-wordList", wordList);
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, clickQueue, markerSize, isClient]);
+  }, [image, circles, clickQueue, markerSize, wordList, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -154,6 +162,7 @@ export default function ImageMarker() {
     setImage(null);
     setCircles({});
     setClickQueue([]);
+    setWordList("");
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
@@ -217,6 +226,15 @@ export default function ImageMarker() {
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6">
         <h1 className="text-xl font-semibold font-headline">Image Marker</h1>
+        <div className="flex-1 px-8">
+            <Textarea
+                placeholder="Enter a list of words, one per line..."
+                className="w-full resize-none bg-background"
+                rows={1}
+                value={wordList}
+                onChange={(e) => setWordList(e.target.value)}
+            />
+        </div>
         <div className="flex items-center gap-2 md:gap-4">
           <Popover>
             <PopoverTrigger asChild>
@@ -328,4 +346,5 @@ export default function ImageMarker() {
       </main>
     </div>
   );
-}
+
+    
