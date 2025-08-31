@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Undo2 } from "lucide-react";
+import { UploadCloud, X, Undo2, BookText } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
@@ -226,16 +226,32 @@ export default function ImageMarker() {
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6">
         <h1 className="text-xl font-semibold font-headline">Image Marker</h1>
-        <div className="flex-1 px-8">
-            <Textarea
-                placeholder="Enter a list of words, one per line..."
-                className="w-full resize-none bg-background"
-                rows={1}
-                value={wordList}
-                onChange={(e) => setWordList(e.target.value)}
-            />
-        </div>
+        <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon">
+                        <BookText className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <h4 className="font-medium leading-none">Word List</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Enter a list of words, one per line.
+                            </p>
+                        </div>
+                        <Textarea
+                            placeholder="Type your words here."
+                            className="w-full resize-y bg-background"
+                            rows={10}
+                            value={wordList}
+                            onChange={(e) => setWordList(e.target.value)}
+                        />
+                    </div>
+                </PopoverContent>
+            </Popover>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" disabled={!image}>
@@ -346,5 +362,4 @@ export default function ImageMarker() {
       </main>
     </div>
   );
-
-    
+}
