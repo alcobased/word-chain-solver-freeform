@@ -33,6 +33,7 @@ export default function ImageMarker() {
   const [clickQueue, setClickQueue] = useState<string[]>([]);
   const [markerSize, setMarkerSize] = useState<number>(16);
   const [wordList, setWordList] = useState<string>("");
+  const [wordConnections, setWordConnections] = useState<Record<string, string[]>>({});
   const [isClient, setIsClient] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +46,7 @@ export default function ImageMarker() {
       const savedClickQueue = localStorage.getItem("imageMarker-clickQueue");
       const savedMarkerSize = localStorage.getItem("imageMarker-markerSize");
       const savedWordList = localStorage.getItem("imageMarker-wordList");
+      const savedWordConnections = localStorage.getItem("imageMarker-wordConnections");
       
       if (savedImage) {
         setImage(JSON.parse(savedImage));
@@ -61,6 +63,9 @@ export default function ImageMarker() {
       if (savedWordList) {
         setWordList(savedWordList);
       }
+      if (savedWordConnections) {
+        setWordConnections(JSON.parse(savedWordConnections));
+      }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
         localStorage.removeItem("imageMarker-image");
@@ -68,6 +73,7 @@ export default function ImageMarker() {
         localStorage.removeItem("imageMarker-clickQueue");
         localStorage.removeItem("imageMarker-markerSize");
         localStorage.removeItem("imageMarker-wordList");
+        localStorage.removeItem("imageMarker-wordConnections");
     }
   }, []);
 
@@ -83,11 +89,12 @@ export default function ImageMarker() {
         localStorage.setItem("imageMarker-clickQueue", JSON.stringify(clickQueue));
         localStorage.setItem("imageMarker-markerSize", JSON.stringify(markerSize));
         localStorage.setItem("imageMarker-wordList", wordList);
+        localStorage.setItem("imageMarker-wordConnections", JSON.stringify(wordConnections));
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, clickQueue, markerSize, wordList, isClient]);
+  }, [image, circles, clickQueue, markerSize, wordList, wordConnections, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -163,6 +170,7 @@ export default function ImageMarker() {
     setCircles({});
     setClickQueue([]);
     setWordList("");
+    setWordConnections({});
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
@@ -208,18 +216,19 @@ export default function ImageMarker() {
 
   const processWordList = () => {
     const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-    const connections: Record<string, string[]> = {};
+    const newConnections: Record<string, string[]> = {};
 
     for (const keyWord of words) {
-        connections[keyWord] = [];
+        newConnections[keyWord] = [];
         for (const otherWord of words) {
             if (keyWord === otherWord) continue;
             if (keyWord.slice(-2) === otherWord.slice(0, 2)) {
-                connections[keyWord].push(otherWord);
+                newConnections[keyWord].push(otherWord);
             }
         }
     }
-    console.log("Word Connections:", connections);
+    setWordConnections(newConnections);
+    console.log("Word Connections:", newConnections);
   }
 
   const getSortedCircles = () => {
@@ -380,3 +389,5 @@ export default function ImageMarker() {
     </div>
   );
 }
+
+    
