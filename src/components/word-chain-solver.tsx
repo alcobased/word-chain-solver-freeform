@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Undo2, BookText, Save, FolderOpen, Wand2 } from "lucide-react";
+import { UploadCloud, X, Undo2, BookText, Save, FolderOpen, Wand2, Plus, Trash2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
@@ -23,6 +23,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 
 type Circle = {
   x: number; // percentage
@@ -38,19 +47,29 @@ type ImageState = {
   height: number;
 }
 
+type Mode = "single" | "multi";
+
+type Queues = Record<string, string[]>; // Chain ID -> array of circle IDs
+
 type AppState = {
     image: ImageState | null;
     circles: Circles;
-    clickQueue: string[];
+    queues: Queues;
+    activeChainId: string | null;
+    mode: Mode;
     markerSize: number;
     wordList: string;
     wordConnections: Record<string, string[]>;
 }
 
+const SINGLE_CHAIN_ID = "main";
+
 export default function WordChainSolver() {
   const [image, setImage] = useState<ImageState | null>(null);
   const [circles, setCircles] = useState<Circles>({});
-  const [clickQueue, setClickQueue] = useState<string[]>([]);
+  const [queues, setQueues] = useState<Queues>({ [SINGLE_CHAIN_ID]: [] });
+  const [activeChainId, setActiveChainId] = useState<string | null>(SINGLE_CHAIN_ID);
+  const [mode, setMode] = useState<Mode>("single");
   const [markerSize, setMarkerSize] = useState<number>(16);
   const [wordList, setWordList] = useState<string>("");
   const [wordConnections, setWordConnections] = useState<Record<string, string[]>>({});
@@ -58,68 +77,54 @@ export default function WordChainSolver() {
   const [isSolving, setIsSolving] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [saveFilename, setSaveFilename] = useState("word-chain-solver-state.json");
+  
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadStateInputRef = useRef<HTMLInputElement>(null);
 
+  const activeQueue = activeChainId ? queues[activeChainId] ?? [] : [];
+
   useEffect(() => {
     setIsClient(true);
     try {
-      const savedImage = localStorage.getItem("wordChainSolver-image");
-      const savedCircles = localStorage.getItem("wordChainSolver-circles");
-      const savedClickQueue = localStorage.getItem("wordChainSolver-clickQueue");
-      const savedMarkerSize = localStorage.getItem("wordChainSolver-markerSize");
-      const savedWordList = localStorage.getItem("wordChainSolver-wordList");
-      const savedWordConnections = localStorage.getItem("wordChainSolver-wordConnections");
-      
-      if (savedImage) {
-        setImage(JSON.parse(savedImage));
-      }
-      if (savedCircles) {
-        setCircles(JSON.parse(savedCircles));
-      }
-      if (savedClickQueue) {
-        setClickQueue(JSON.parse(savedClickQueue));
-      }
-      if (savedMarkerSize) {
-        setMarkerSize(JSON.parse(savedMarkerSize));
-      }
-      if (savedWordList) {
-        setWordList(savedWordList);
-      }
-      if (savedWordConnections) {
-        setWordConnections(JSON.parse(savedWordConnections));
+      const savedState = localStorage.getItem("wordChainSolverState");
+      if (savedState) {
+          const state: AppState = JSON.parse(savedState);
+          setImage(state.image);
+          setCircles(state.circles);
+          setQueues(state.queues || { [SINGLE_CHAIN_ID]: [] });
+          setMode(state.mode || 'single');
+          setActiveChainId(state.activeChainId || SINGLE_CHAIN_ID);
+          setMarkerSize(state.markerSize);
+          setWordList(state.wordList);
+          setWordConnections(state.wordConnections);
       }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
-        localStorage.removeItem("wordChainSolver-image");
-        localStorage.removeItem("wordChainSolver-circles");
-        localStorage.removeItem("wordChainSolver-clickQueue");
-        localStorage.removeItem("wordChainSolver-markerSize");
-        localStorage.removeItem("wordChainSolver-wordList");
-        localStorage.removeItem("wordChainSolver-wordConnections");
+        localStorage.removeItem("wordChainSolverState");
     }
   }, []);
 
   useEffect(() => {
     if (isClient) {
       try {
-        if (image) {
-          localStorage.setItem("wordChainSolver-image", JSON.stringify(image));
-        } else {
-          localStorage.removeItem("wordChainSolver-image");
-        }
-        localStorage.setItem("wordChainSolver-circles", JSON.stringify(circles));
-        localStorage.setItem("wordChainSolver-clickQueue", JSON.stringify(clickQueue));
-        localStorage.setItem("wordChainSolver-markerSize", JSON.stringify(markerSize));
-        localStorage.setItem("wordChainSolver-wordList", wordList);
-        localStorage.setItem("wordChainSolver-wordConnections", JSON.stringify(wordConnections));
+        const stateToSave: AppState = {
+            image,
+            circles,
+            queues,
+            activeChainId,
+            mode,
+            markerSize,
+            wordList,
+            wordConnections
+        };
+        localStorage.setItem("wordChainSolverState", JSON.stringify(stateToSave));
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, clickQueue, markerSize, wordList, wordConnections, isClient]);
+  }, [image, circles, queues, activeChainId, mode, markerSize, wordList, wordConnections, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -134,8 +139,7 @@ export default function WordChainSolver() {
                 width: img.naturalWidth,
                 height: img.naturalHeight,
             });
-            setCircles({});
-            setClickQueue([]);
+            handleClear(false);
         };
         img.src = dataUrl;
       };
@@ -144,12 +148,11 @@ export default function WordChainSolver() {
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    // Prevent adding a new circle if a circle was clicked.
     if ((e.target as HTMLElement).closest('[data-circle-id]')) {
       return;
     }
 
-    if (!imageRef.current) return;
+    if (!imageRef.current || !activeChainId) return;
 
     const img = imageRef.current;
     const rect = img.getBoundingClientRect();
@@ -177,23 +180,30 @@ export default function WordChainSolver() {
       [newCircleId]: { x: xPercent, y: yPercent }
     }));
     
-    setClickQueue(prevQueue => [...prevQueue, newCircleId]);
+    setQueues(prevQueues => ({
+        ...prevQueues,
+        [activeChainId]: [...(prevQueues[activeChainId] ?? []), newCircleId]
+    }));
   };
   
   const handleCircleClick = (clickedCircleId: string) => {
-    setClickQueue(prevQueue => {
-      const clickCount = prevQueue.filter(id => id === clickedCircleId).length;
-      if (clickCount < 2) {
-        return [...prevQueue, clickedCircleId];
-      }
-      return prevQueue;
-    });
+    if (!activeChainId) return;
+
+    const clickCountInActiveQueue = (queues[activeChainId] ?? []).filter(id => id === clickedCircleId).length;
+    if (clickCountInActiveQueue < 2) {
+        setQueues(prevQueues => ({
+            ...prevQueues,
+            [activeChainId]: [...(prevQueues[activeChainId] ?? []), clickedCircleId]
+        }));
+    }
   };
 
-  const handleClear = () => {
-    setImage(null);
+  const handleClear = (clearImage: boolean = true) => {
+    if(clearImage) setImage(null);
     setCircles({});
-    setClickQueue([]);
+    setQueues({ [SINGLE_CHAIN_ID]: [] });
+    setActiveChainId(SINGLE_CHAIN_ID);
+    setMode("single");
     setWordList("");
     setWordConnections({});
     if (fileInputRef.current) {
@@ -206,9 +216,9 @@ export default function WordChainSolver() {
   };
 
   const handleCharChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (clickQueue.length === 0) return;
+    if (activeQueue.length === 0) return;
 
-    const lastClickedId = clickQueue[clickQueue.length - 1];
+    const lastClickedId = activeQueue[activeQueue.length - 1];
     const newChar = e.target.value.toUpperCase().slice(0, 1);
 
     setCircles(prev => ({
@@ -221,22 +231,27 @@ export default function WordChainSolver() {
   }
 
   const handleUndoClick = () => {
-    if (clickQueue.length === 0) return;
+    if (!activeChainId || activeQueue.length === 0) return;
 
-    const lastClickedId = clickQueue[clickQueue.length - 1];
-    const clickCount = clickQueue.filter(id => id === lastClickedId).length;
+    const lastClickedId = activeQueue[activeQueue.length - 1];
+    const newActiveQueue = activeQueue.slice(0, -1);
+    
+    setQueues(prevQueues => ({
+        ...prevQueues,
+        [activeChainId]: newActiveQueue
+    }));
 
-    if (clickCount === 1) {
-      // If it's the first click on this circle, remove the circle.
+    // Check if the removed circle is part of any other queue
+    const isCircleUsedElsewhere = Object.values(queues).some(q => q.includes(lastClickedId));
+    
+    if (!isCircleUsedElsewhere) {
+      // If it's not used anywhere else, remove the circle itself.
       setCircles(prevCircles => {
         const newCircles = { ...prevCircles };
         delete newCircles[lastClickedId];
         return newCircles;
       });
     }
-
-    // In both cases (1 or 2 clicks), remove the last entry from the queue.
-    setClickQueue(prevQueue => prevQueue.slice(0, -1));
   };
 
   const processWordList = () => {
@@ -256,14 +271,14 @@ export default function WordChainSolver() {
     console.log("Word Connections:", newConnections);
   }
 
-  const getSortedCirclesWithIds = () => {
-    // Create a set of unique IDs from the click queue to define the order.
-    const orderedUniqueIds = [...new Set(clickQueue)];
+  const getSortedCirclesForActiveChain = () => {
+    if (!activeChainId) return [];
+    const orderedUniqueIds = [...new Set(activeQueue)];
   
     return orderedUniqueIds.map(id => ({
       id,
       ...circles[id]
-    }));
+    })).filter(c => c.x !== undefined); // Ensure circle exists
   }
 
   const handleSaveState = () => {
@@ -275,7 +290,9 @@ export default function WordChainSolver() {
     const stateToSave: AppState = {
       image,
       circles,
-      clickQueue,
+      queues,
+      activeChainId,
+      mode,
       markerSize,
       wordList,
       wordConnections
@@ -300,18 +317,21 @@ export default function WordChainSolver() {
       reader.onload = (event) => {
         try {
           const loadedState: AppState = JSON.parse(event.target?.result as string);
-          // Basic validation
           if (
             'image' in loadedState &&
             'circles' in loadedState &&
-            'clickQueue' in loadedState &&
+            'queues' in loadedState &&
+            'activeChainId' in loadedState &&
+            'mode' in loadedState &&
             'markerSize' in loadedState &&
             'wordList' in loadedState &&
             'wordConnections' in loadedState
           ) {
             setImage(loadedState.image);
             setCircles(loadedState.circles);
-            setClickQueue(loadedState.clickQueue);
+            setQueues(loadedState.queues);
+            setActiveChainId(loadedState.activeChainId);
+            setMode(loadedState.mode);
             setMarkerSize(loadedState.markerSize);
             setWordList(loadedState.wordList);
             setWordConnections(loadedState.wordConnections);
@@ -325,7 +345,6 @@ export default function WordChainSolver() {
         }
       };
       reader.readAsText(file);
-      // Reset file input to allow loading the same file again
       if (loadStateInputRef.current) {
         loadStateInputRef.current.value = "";
       }
@@ -340,7 +359,6 @@ export default function WordChainSolver() {
   ): { solution: string[], reasoning: string } => {
     const totalLength = queue.length;
     
-    // Group indices by circle ID
     const circleIdToIndices: Record<string, number[]> = {};
     queue.forEach((id, index) => {
       if (!circleIdToIndices[id]) {
@@ -364,22 +382,19 @@ export default function WordChainSolver() {
       }
       
       if (currentChain.length === totalLength) {
-        // This check is now done during the recursion,
-        // but we'll keep it as a final validation.
         for (const { char, index } of knownChars) {
           if (currentChain[index] !== char) {
             return [];
           }
         }
         
-        // Final validation for repeated circles
         for (const id in circleIdToIndices) {
           const indices = circleIdToIndices[id];
           if (indices.length > 1) {
             const firstChar = currentChain[indices[0]];
             for (let i = 1; i < indices.length; i++) {
               if (currentChain[indices[i]] !== firstChar) {
-                return []; // Fail validation
+                return [];
               }
             }
           }
@@ -396,9 +411,7 @@ export default function WordChainSolver() {
 
         const newChain = lastWord ? currentChain + word.slice(2) : word;
         
-        // Pre-check constraints as we build the chain
         let possible = true;
-        // 1. Check against known characters
         for (const { char, index } of knownChars) {
           if (index < newChain.length && newChain[index] !== char) {
             possible = false;
@@ -407,7 +420,6 @@ export default function WordChainSolver() {
         }
         if (!possible) continue;
         
-        // 2. Check for consistency among repeated circles
         for (const id in circleIdToIndices) {
             const indices = circleIdToIndices[id];
             if (indices.length > 1) {
@@ -450,21 +462,24 @@ export default function WordChainSolver() {
   };
 
   const handleFindSolution = async () => {
-    const orderedCircles = getSortedCirclesWithIds();
+    if (!activeChainId) {
+        toast({ variant: "destructive", title: "No active chain selected." });
+        return;
+    }
     const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
 
-    if (orderedCircles.length === 0 || words.length === 0 || Object.keys(wordConnections).length === 0) {
+    if (activeQueue.length === 0 || words.length === 0 || Object.keys(wordConnections).length === 0) {
       toast({
         variant: "destructive",
         title: "Cannot Find Solution",
-        description: "Please add markers, a word list, and process the list before finding a solution.",
+        description: "Please add markers to the active chain, add a word list, and process the list before finding a solution.",
       });
       return;
     }
     
     setIsSolving(true);
     try {
-      const result = solveLocally(clickQueue, circles, words, wordConnections);
+      const result = solveLocally(activeQueue, circles, words, wordConnections);
       
       if (result.solution.length > 0) {
         let solutionString = "";
@@ -476,9 +491,8 @@ export default function WordChainSolver() {
         }
 
         const updatedCircles = { ...circles };
-        const uniqueOrderedIds = [...new Set(clickQueue)];
         
-        clickQueue.forEach((circleId, index) => {
+        activeQueue.forEach((circleId, index) => {
             if(index < solutionString.length) {
                 if (updatedCircles[circleId]) {
                     updatedCircles[circleId] = {
@@ -515,8 +529,58 @@ export default function WordChainSolver() {
       setIsSolving(false);
     }
   };
-  
-  const lastClickedId = clickQueue.length > 0 ? clickQueue[clickQueue.length - 1] : null;
+
+  const handleModeChange = (isMulti: boolean) => {
+      const newMode = isMulti ? "multi" : "single";
+      setMode(newMode);
+      if (newMode === 'single') {
+          setActiveChainId(SINGLE_CHAIN_ID);
+      } else {
+          // If switching to multi and only the single chain exists, keep it active.
+          if (Object.keys(queues).length === 1 && queues[SINGLE_CHAIN_ID]) {
+              setActiveChainId(SINGLE_CHAIN_ID);
+          } else if (Object.keys(queues).length > 0) {
+              setActiveChainId(Object.keys(queues)[0]);
+          } else {
+              // No chains exist, create one
+              const newChainId = `chain-${Date.now()}`;
+              setQueues({ [newChainId]: [] });
+              setActiveChainId(newChainId);
+          }
+      }
+  }
+
+  const handleAddChain = () => {
+    const newChainId = `chain-${Date.now()}`;
+    setQueues(prev => ({...prev, [newChainId]: [] }));
+    setActiveChainId(newChainId);
+  }
+
+  const handleDeleteChain = () => {
+    if (!activeChainId || Object.keys(queues).length <= 1) return;
+    
+    // Create copies to modify
+    const newQueues = { ...queues };
+    const queueToDelete = newQueues[activeChainId];
+    delete newQueues[activeChainId];
+    
+    const newCircles = { ...circles };
+    // Check which circles can be deleted
+    queueToDelete.forEach(circleId => {
+      const isUsedElsewhere = Object.values(newQueues).some(q => q.includes(circleId));
+      if (!isUsedElsewhere) {
+        delete newCircles[circleId];
+      }
+    });
+
+    setQueues(newQueues);
+    setCircles(newCircles);
+    
+    // Set a new active chain
+    setActiveChainId(Object.keys(newQueues)[0] ?? null);
+  }
+
+  const lastClickedId = activeQueue.length > 0 ? activeQueue[activeQueue.length - 1] : null;
   const lastCircleChar = lastClickedId ? circles[lastClickedId]?.char : '';
 
   return (
@@ -525,7 +589,39 @@ export default function WordChainSolver() {
         <h1 className="text-xl font-semibold font-headline">Word Chain Solver</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
-            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image}>
+            <div className="flex items-center space-x-2">
+                <Label htmlFor="mode-switch">Single Chain</Label>
+                <Switch 
+                    id="mode-switch" 
+                    checked={mode === 'multi'} 
+                    onCheckedChange={handleModeChange}
+                />
+                <Label htmlFor="mode-switch">Multi Chain</Label>
+            </div>
+             {mode === 'multi' && (
+                <div className="flex items-center gap-2">
+                    <Select value={activeChainId ?? ""} onValueChange={setActiveChainId}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select a chain" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.keys(queues).map(id => (
+                                <SelectItem key={id} value={id}>
+                                    {id === SINGLE_CHAIN_ID ? 'Main Chain' : id}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" onClick={handleAddChain}>
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={handleDeleteChain} disabled={Object.keys(queues).length <= 1}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+            <div className="h-6 border-l mx-2"></div>
+            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image || !activeChainId}>
                 <Wand2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
             </Button>
@@ -548,7 +644,7 @@ export default function WordChainSolver() {
                         <BookText className="h-4 w-4" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 z-[101]" align="end">
+                <PopoverContent className="w-80 z-[102]" align="end">
                     <div className="grid gap-4">
                         <div className="space-y-2">
                             <h4 className="font-medium leading-none">Word List</h4>
@@ -573,7 +669,7 @@ export default function WordChainSolver() {
                 <Settings2 className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 z-[101]" align="end">
+            <PopoverContent className="w-56 z-[102]" align="end">
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <h4 className="font-medium leading-none">Controls</h4>
@@ -598,18 +694,18 @@ export default function WordChainSolver() {
                         maxLength={1}
                         value={lastCircleChar || ''}
                         onChange={handleCharChange}
-                        disabled={clickQueue.length === 0}
+                        disabled={activeQueue.length === 0}
                         placeholder="Set for last marker"
                     />
                 </div>
-                <Button onClick={handleUndoClick} variant="outline" size="sm" disabled={clickQueue.length === 0}>
+                <Button onClick={handleUndoClick} variant="outline" size="sm" disabled={activeQueue.length === 0}>
                     <Undo2 className="h-4 w-4 mr-2" />
                     Undo
                 </Button>
               </div>
             </PopoverContent>
           </Popover>
-          <Button onClick={handleClear} variant="ghost" size="sm" disabled={!image}>
+          <Button onClick={() => handleClear(true)} variant="ghost" size="sm" disabled={!image}>
             <X className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Clear</span>
           </Button>
@@ -637,15 +733,18 @@ export default function WordChainSolver() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {getSortedCirclesWithIds().map((circle, index) => {
-                const clickCount = clickQueue.filter(id => id === circle.id).length;
+              {Object.entries(circles).map(([id, circle]) => {
+                const isInActiveQueue = activeQueue.includes(id);
+                const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
+
                 return (
                 <div
-                  key={circle.id}
-                  data-circle-id={circle.id}
+                  key={id}
+                  data-circle-id={id}
                   className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary ring-2 ring-white flex items-center justify-center text-white font-bold",
-                    clickCount > 1 ? "bg-accent" : "bg-primary/30"
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                    isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
+                    isInActiveQueue && (clickCountInActiveQueue > 1 ? "bg-accent" : "bg-primary/30")
                   )}
                   style={{
                     left: `${circle.x * 100}%`,
@@ -653,11 +752,11 @@ export default function WordChainSolver() {
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
                     fontSize: `${markerSize * 0.6}px`,
-                    zIndex: index + 10
+                    zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCircleClick(circle.id);
+                    handleCircleClick(id);
                   }}
                   aria-hidden="true"
                 >
@@ -676,7 +775,7 @@ export default function WordChainSolver() {
         )}
       </main>
       <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[201]">
           <AlertDialogHeader>
             <AlertDialogTitle>Save Current State</AlertDialogTitle>
             <AlertDialogDescription>
