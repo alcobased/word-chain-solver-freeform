@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 type Circle = {
   x: number; // percentage
   y: number; // percentage
+  char?: string;
 };
 
 type Circles = Record<string, Circle>;
@@ -162,6 +163,21 @@ export default function ImageMarker() {
     setMarkerSize(value[0]);
   };
 
+  const handleCharChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (clickQueue.length === 0) return;
+
+    const lastClickedId = clickQueue[clickQueue.length - 1];
+    const newChar = e.target.value.toUpperCase().slice(0, 1);
+
+    setCircles(prev => ({
+        ...prev,
+        [lastClickedId]: {
+            ...prev[lastClickedId],
+            char: newChar
+        }
+    }))
+  }
+
   const getSortedCircles = () => {
     const sortedIds = Object.keys(circles).sort((a, b) => {
       const lastIndexA = clickQueue.lastIndexOf(a);
@@ -174,6 +190,9 @@ export default function ImageMarker() {
       ...circles[id]
     }));
   }
+  
+  const lastClickedId = clickQueue.length > 0 ? clickQueue[clickQueue.length - 1] : null;
+  const lastCircleChar = lastClickedId ? circles[lastClickedId]?.char : '';
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -204,6 +223,16 @@ export default function ImageMarker() {
                     value={[markerSize]}
                     onValueChange={handleMarkerSizeChange}
                   />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="marker-char">Marker Character</Label>
+                    <Input id="marker-char" 
+                        maxLength={1}
+                        value={lastCircleChar || ''}
+                        onChange={handleCharChange}
+                        disabled={clickQueue.length === 0}
+                        placeholder="Set for last marker"
+                    />
                 </div>
               </div>
             </PopoverContent>
@@ -243,7 +272,7 @@ export default function ImageMarker() {
                   key={circle.id}
                   data-circle-id={circle.id}
                   className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary ring-2 ring-white",
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary ring-2 ring-white flex items-center justify-center text-white font-bold",
                     clickCount > 1 ? "bg-accent" : "bg-primary/30"
                   )}
                   style={{
@@ -251,6 +280,7 @@ export default function ImageMarker() {
                     top: `${circle.y * 100}%`,
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
+                    fontSize: `${markerSize * 0.6}px`,
                     zIndex: index + 1
                   }}
                   onClick={(e) => {
@@ -258,7 +288,9 @@ export default function ImageMarker() {
                     handleCircleClick(circle.id);
                   }}
                   aria-hidden="true"
-                />
+                >
+                  {circle.char}
+                </div>
               )})}
             </div>
           </div>
