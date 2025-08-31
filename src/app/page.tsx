@@ -1,5 +1,5 @@
-import ImageMarker from "@/components/image-marker";
+import WordChainSolver from "@/components/word-chain-solver";
 
 export default function Home() {
-  return <ImageMarker />;
+  return <WordChainSolver />;
 }

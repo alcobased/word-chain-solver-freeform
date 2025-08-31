@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Image Marker',
-  description: 'Upload an image and mark points on it.',
+  title: 'Word Chain Solver',
+  description: 'Solve word chain puzzles on an image.',
 };
 
 export default function RootLayout({

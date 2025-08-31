@@ -36,7 +36,7 @@ type AppState = {
     wordConnections: Record<string, string[]>;
 }
 
-export default function ImageMarker() {
+export default function WordChainSolver() {
   const [image, setImage] = useState<ImageState | null>(null);
   const [circles, setCircles] = useState<Circles>({});
   const [clickQueue, setClickQueue] = useState<string[]>([]);
@@ -51,12 +51,12 @@ export default function ImageMarker() {
   useEffect(() => {
     setIsClient(true);
     try {
-      const savedImage = localStorage.getItem("imageMarker-image");
-      const savedCircles = localStorage.getItem("imageMarker-circles");
-      const savedClickQueue = localStorage.getItem("imageMarker-clickQueue");
-      const savedMarkerSize = localStorage.getItem("imageMarker-markerSize");
-      const savedWordList = localStorage.getItem("imageMarker-wordList");
-      const savedWordConnections = localStorage.getItem("imageMarker-wordConnections");
+      const savedImage = localStorage.getItem("wordChainSolver-image");
+      const savedCircles = localStorage.getItem("wordChainSolver-circles");
+      const savedClickQueue = localStorage.getItem("wordChainSolver-clickQueue");
+      const savedMarkerSize = localStorage.getItem("wordChainSolver-markerSize");
+      const savedWordList = localStorage.getItem("wordChainSolver-wordList");
+      const savedWordConnections = localStorage.getItem("wordChainSolver-wordConnections");
       
       if (savedImage) {
         setImage(JSON.parse(savedImage));
@@ -78,12 +78,12 @@ export default function ImageMarker() {
       }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
-        localStorage.removeItem("imageMarker-image");
-        localStorage.removeItem("imageMarker-circles");
-        localStorage.removeItem("imageMarker-clickQueue");
-        localStorage.removeItem("imageMarker-markerSize");
-        localStorage.removeItem("imageMarker-wordList");
-        localStorage.removeItem("imageMarker-wordConnections");
+        localStorage.removeItem("wordChainSolver-image");
+        localStorage.removeItem("wordChainSolver-circles");
+        localStorage.removeItem("wordChainSolver-clickQueue");
+        localStorage.removeItem("wordChainSolver-markerSize");
+        localStorage.removeItem("wordChainSolver-wordList");
+        localStorage.removeItem("wordChainSolver-wordConnections");
     }
   }, []);
 
@@ -91,15 +91,15 @@ export default function ImageMarker() {
     if (isClient) {
       try {
         if (image) {
-          localStorage.setItem("imageMarker-image", JSON.stringify(image));
+          localStorage.setItem("wordChainSolver-image", JSON.stringify(image));
         } else {
-          localStorage.removeItem("imageMarker-image");
+          localStorage.removeItem("wordChainSolver-image");
         }
-        localStorage.setItem("imageMarker-circles", JSON.stringify(circles));
-        localStorage.setItem("imageMarker-clickQueue", JSON.stringify(clickQueue));
-        localStorage.setItem("imageMarker-markerSize", JSON.stringify(markerSize));
-        localStorage.setItem("imageMarker-wordList", wordList);
-        localStorage.setItem("imageMarker-wordConnections", JSON.stringify(wordConnections));
+        localStorage.setItem("wordChainSolver-circles", JSON.stringify(circles));
+        localStorage.setItem("wordChainSolver-clickQueue", JSON.stringify(clickQueue));
+        localStorage.setItem("wordChainSolver-markerSize", JSON.stringify(markerSize));
+        localStorage.setItem("wordChainSolver-wordList", wordList);
+        localStorage.setItem("wordChainSolver-wordConnections", JSON.stringify(wordConnections));
       } catch (error) {
         console.error("Failed to save data to localStorage", error);
       }
@@ -268,7 +268,7 @@ export default function ImageMarker() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'image-marker-state.json';
+    a.download = 'word-chain-solver-state.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -320,7 +320,7 @@ export default function ImageMarker() {
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6">
-        <h1 className="text-xl font-semibold font-headline">Image Marker</h1>
+        <h1 className="text-xl font-semibold font-headline">Word Chain Solver</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
             <Button onClick={handleSaveState} variant="outline" size="sm" disabled={!image}>
@@ -471,5 +471,4 @@ export default function ImageMarker() {
       </main>
     </div>
   );
-
-    
+}
