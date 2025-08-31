@@ -206,6 +206,22 @@ export default function ImageMarker() {
     setClickQueue(prevQueue => prevQueue.slice(0, -1));
   };
 
+  const processWordList = () => {
+    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+    const connections: Record<string, string[]> = {};
+
+    for (const keyWord of words) {
+        connections[keyWord] = [];
+        for (const otherWord of words) {
+            if (keyWord === otherWord) continue;
+            if (keyWord.slice(-2) === otherWord.slice(0, 2)) {
+                connections[keyWord].push(otherWord);
+            }
+        }
+    }
+    console.log("Word Connections:", connections);
+  }
+
   const getSortedCircles = () => {
     const sortedIds = Object.keys(circles).sort((a, b) => {
       const lastIndexA = clickQueue.lastIndexOf(a);
@@ -249,6 +265,7 @@ export default function ImageMarker() {
                             value={wordList}
                             onChange={(e) => setWordList(e.target.value)}
                         />
+                         <Button onClick={processWordList} disabled={!wordList.trim()}>Process Word List</Button>
                     </div>
                 </PopoverContent>
             </Popover>
