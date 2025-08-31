@@ -13,6 +13,16 @@ import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Circle = {
   x: number; // percentage
@@ -46,6 +56,8 @@ export default function WordChainSolver() {
   const [wordConnections, setWordConnections] = useState<Record<string, string[]>>({});
   const [isClient, setIsClient] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [saveFilename, setSaveFilename] = useState("word-chain-solver-state.json");
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -255,7 +267,7 @@ export default function WordChainSolver() {
   }
 
   const handleSaveState = () => {
-    const filename = window.prompt("Enter a filename for your save state:", "word-chain-solver-state.json");
+    const filename = saveFilename;
     if (!filename) {
       return;
     }
@@ -278,6 +290,7 @@ export default function WordChainSolver() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setIsSaveDialogOpen(false);
   };
 
   const handleLoadState = (e: ChangeEvent<HTMLInputElement>) => {
@@ -462,7 +475,7 @@ export default function WordChainSolver() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6 z-[100]">
         <h1 className="text-xl font-semibold font-headline">Word Chain Solver</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
@@ -470,7 +483,7 @@ export default function WordChainSolver() {
                 <Wand2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
             </Button>
-            <Button onClick={handleSaveState} variant="outline" size="sm" disabled={!image}>
+            <Button onClick={() => setIsSaveDialogOpen(true)} variant="outline" size="sm" disabled={!image}>
                 <Save className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Save</span>
             </Button>
@@ -616,6 +629,29 @@ export default function WordChainSolver() {
           </div>
         )}
       </main>
+      <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Current State</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a filename for your save state. It will be saved as a JSON file.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 py-4">
+            <Label htmlFor="filename">Filename</Label>
+            <Input
+              id="filename"
+              value={saveFilename}
+              onChange={(e) => setSaveFilename(e.target.value)}
+              placeholder="word-chain-solver-state.json"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveState}>Save</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
