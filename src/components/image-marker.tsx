@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Undo2, BookText } from "lucide-react";
+import { UploadCloud, X, Undo2, BookText, Save, FolderOpen } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
@@ -27,6 +27,15 @@ type ImageState = {
   height: number;
 }
 
+type AppState = {
+    image: ImageState | null;
+    circles: Circles;
+    clickQueue: string[];
+    markerSize: number;
+    wordList: string;
+    wordConnections: Record<string, string[]>;
+}
+
 export default function ImageMarker() {
   const [image, setImage] = useState<ImageState | null>(null);
   const [circles, setCircles] = useState<Circles>({});
@@ -37,6 +46,7 @@ export default function ImageMarker() {
   const [isClient, setIsClient] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadStateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -243,6 +253,66 @@ export default function ImageMarker() {
       ...circles[id]
     }));
   }
+
+  const handleSaveState = () => {
+    const stateToSave: AppState = {
+      image,
+      circles,
+      clickQueue,
+      markerSize,
+      wordList,
+      wordConnections
+    };
+
+    const blob = new Blob([JSON.stringify(stateToSave, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'image-marker-state.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoadState = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const loadedState: AppState = JSON.parse(event.target?.result as string);
+          // Basic validation
+          if (
+            'image' in loadedState &&
+            'circles' in loadedState &&
+            'clickQueue' in loadedState &&
+            'markerSize' in loadedState &&
+            'wordList' in loadedState &&
+            'wordConnections' in loadedState
+          ) {
+            setImage(loadedState.image);
+            setCircles(loadedState.circles);
+            setClickQueue(loadedState.clickQueue);
+            setMarkerSize(loadedState.markerSize);
+            setWordList(loadedState.wordList);
+            setWordConnections(loadedState.wordConnections);
+          } else {
+            console.error("Invalid state file format.");
+            alert("Invalid state file format.");
+          }
+        } catch (error) {
+          console.error("Failed to parse state file.", error);
+          alert("Failed to read or parse the state file.");
+        }
+      };
+      reader.readAsText(file);
+      // Reset file input to allow loading the same file again
+      if (loadStateInputRef.current) {
+        loadStateInputRef.current.value = "";
+      }
+    }
+  };
   
   const lastClickedId = clickQueue.length > 0 ? clickQueue[clickQueue.length - 1] : null;
   const lastCircleChar = lastClickedId ? circles[lastClickedId]?.char : '';
@@ -253,6 +323,19 @@ export default function ImageMarker() {
         <h1 className="text-xl font-semibold font-headline">Image Marker</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
+            <Button onClick={handleSaveState} variant="outline" size="sm" disabled={!image}>
+                <Save className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Save</span>
+            </Button>
+            <Label htmlFor="load-state-input" className="cursor-pointer">
+                <Button asChild variant="outline" size="sm">
+                    <div className="flex items-center">
+                        <FolderOpen className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Load</span>
+                    </div>
+                </Button>
+            </Label>
+            <Input id="load-state-input" type="file" accept=".json" className="hidden" onChange={handleLoadState} ref={loadStateInputRef} />
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -388,6 +471,5 @@ export default function ImageMarker() {
       </main>
     </div>
   );
-}
 
     
