@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Settings2 } from "lucide-react";
 
 type Circle = {
+  id: string;
   x: number; // percentage
   y: number; // percentage
 };
@@ -91,6 +92,11 @@ export default function ImageMarker() {
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Prevent adding a new circle if a circle was clicked.
+    if ((e.target as HTMLElement).closest('[data-circle-id]')) {
+      return;
+    }
+
     if (!imageRef.current) return;
 
     const img = imageRef.current;
@@ -112,7 +118,20 @@ export default function ImageMarker() {
     const xPercent = relativeX / rect.width;
     const yPercent = relativeY / rect.height;
 
-    setCircles(prevCircles => [...prevCircles, { x: xPercent, y: yPercent }]);
+    const newCircle: Circle = {
+      id: crypto.randomUUID(),
+      x: xPercent,
+      y: yPercent
+    };
+
+    setCircles(prevCircles => [...prevCircles, newCircle]);
+  };
+  
+  const handleCircleClick = (clickedCircle: Circle) => {
+    setCircles(prevCircles => {
+      const otherCircles = prevCircles.filter(c => c.id !== clickedCircle.id);
+      return [...otherCircles, clickedCircle];
+    });
   };
 
   const handleClear = () => {
@@ -188,15 +207,20 @@ export default function ImageMarker() {
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
               />
-              {circles.map((circle, index) => (
+              {circles.map((circle) => (
                 <div
-                  key={index}
-                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary bg-primary/30 ring-2 ring-white"
+                  key={circle.id}
+                  data-circle-id={circle.id}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-primary bg-primary/30 ring-2 ring-white"
                   style={{
                     left: `${circle.x * 100}%`,
                     top: `${circle.y * 100}%`,
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCircleClick(circle);
                   }}
                   aria-hidden="true"
                 ></div>
