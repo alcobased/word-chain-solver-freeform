@@ -339,6 +339,16 @@ export default function WordChainSolver() {
     connections: Record<string, string[]>
   ): { solution: string[], reasoning: string } => {
     const totalLength = queue.length;
+    
+    // Group indices by circle ID
+    const circleIdToIndices: Record<string, number[]> = {};
+    queue.forEach((id, index) => {
+      if (!circleIdToIndices[id]) {
+        circleIdToIndices[id] = [];
+      }
+      circleIdToIndices[id].push(index);
+    });
+
     const knownChars = queue.map((id, index) => ({
       char: allCircles[id]?.char,
       index
@@ -354,9 +364,24 @@ export default function WordChainSolver() {
       }
       
       if (currentChain.length === totalLength) {
+        // This check is now done during the recursion,
+        // but we'll keep it as a final validation.
         for (const { char, index } of knownChars) {
           if (currentChain[index] !== char) {
             return [];
+          }
+        }
+        
+        // Final validation for repeated circles
+        for (const id in circleIdToIndices) {
+          const indices = circleIdToIndices[id];
+          if (indices.length > 1) {
+            const firstChar = currentChain[indices[0]];
+            for (let i = 1; i < indices.length; i++) {
+              if (currentChain[indices[i]] !== firstChar) {
+                return []; // Fail validation
+              }
+            }
           }
         }
         return [usedWords];
@@ -371,13 +396,34 @@ export default function WordChainSolver() {
 
         const newChain = lastWord ? currentChain + word.slice(2) : word;
         
-        // Pre-check known characters
+        // Pre-check constraints as we build the chain
         let possible = true;
+        // 1. Check against known characters
         for (const { char, index } of knownChars) {
           if (index < newChain.length && newChain[index] !== char) {
             possible = false;
             break;
           }
+        }
+        if (!possible) continue;
+        
+        // 2. Check for consistency among repeated circles
+        for (const id in circleIdToIndices) {
+            const indices = circleIdToIndices[id];
+            if (indices.length > 1) {
+                let firstChar: string | null = null;
+                for (const index of indices) {
+                    if (index < newChain.length) {
+                        if (firstChar === null) {
+                            firstChar = newChain[index];
+                        } else if (newChain[index] !== firstChar) {
+                            possible = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!possible) break;
         }
         if (!possible) continue;
         
@@ -475,7 +521,7 @@ export default function WordChainSolver() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6 z-[100]">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 shadow-sm md:px-6 z-[101]">
         <h1 className="text-xl font-semibold font-headline">Word Chain Solver</h1>
         <div className="flex-1" />
         <div className="flex items-center gap-2 md:gap-4">
@@ -502,7 +548,7 @@ export default function WordChainSolver() {
                         <BookText className="h-4 w-4" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80" align="end">
+                <PopoverContent className="w-80 z-[101]" align="end">
                     <div className="grid gap-4">
                         <div className="space-y-2">
                             <h4 className="font-medium leading-none">Word List</h4>
@@ -527,7 +573,7 @@ export default function WordChainSolver() {
                 <Settings2 className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
+            <PopoverContent className="w-56 z-[101]" align="end">
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <h4 className="font-medium leading-none">Controls</h4>
@@ -655,3 +701,5 @@ export default function WordChainSolver() {
     </div>
   );
 }
+
+    
