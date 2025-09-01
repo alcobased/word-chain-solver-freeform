@@ -115,7 +115,7 @@ describe('solveSingleChain', () => {
             // 'E' is at indices 1 and 8. 'R' is at indices 5 and 9.
             // c1 corresponds to 'E', c5 corresponds to 'R'.
             const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c1', 'c5'];
-            queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+            queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
 
             const wordList = 'LEADER ERASER';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
@@ -131,7 +131,7 @@ describe('solveSingleChain', () => {
             // "LEADER" -> "ERASER" = LEADERASER (10 letters)
             // Crossover point 'c1' is at index 1 ('E') and index 5 ('R'). This should fail.
             const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c8', 'c9'];
-             queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+             queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
 
             const wordList = 'LEADER ERASER';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
@@ -140,6 +140,58 @@ describe('solveSingleChain', () => {
             const results = solveSingleChain(queue, circles, words, connections);
 
             expect(results).toHaveLength(0);
+        });
+    });
+    
+    describe('with pre-filled character constraints', () => {
+        let circles: Circles;
+        let queue: string[];
+
+        beforeEach(() => {
+            circles = {};
+            queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
+            queue.forEach(id => {
+                circles[id] = { x: 0, y: 0 };
+            });
+        });
+
+        it('should find a solution that respects a valid pre-filled character', () => {
+            // Chain is TOASTOPENTER. Character at index 2 is 'A'.
+            circles['c2'].char = 'A';
+
+            const wordList = 'TOAST STOP OPEN ENTER';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+
+            const result = solveSingleChain(queue, circles, words, connections);
+            expect(result).toHaveLength(1);
+            expect(result[0].solution).toEqual(['TOAST', 'STOP', 'OPEN', 'ENTER']);
+        });
+
+        it('should not find a solution if a pre-filled character is invalid', () => {
+            // Chain is TOASTOPENTER. Character at index 2 is 'A', not 'X'.
+            circles['c2'].char = 'X';
+
+            const wordList = 'TOAST STOP OPEN ENTER';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+
+            const result = solveSingleChain(queue, circles, words, connections);
+            expect(result).toHaveLength(0);
+        });
+
+        it('should use a pre-filled character to select the correct solution from multiple possibilities', () => {
+            // Possible chains: TOASTOPENTER, COASTOPENTER.
+            // Clue at index 0 is 'T', so only TOAST... is valid.
+            circles['c0'].char = 'T';
+
+            const wordList = 'TOAST STOP OPEN ENTER COAST';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+
+            const result = solveSingleChain(queue, circles, words, connections);
+            expect(result).toHaveLength(1);
+            expect(result[0].solution).toEqual(['TOAST', 'STOP', 'OPEN', 'ENTER']);
         });
     });
 });
