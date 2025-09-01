@@ -47,12 +47,20 @@ type ImageState = {
   height: number;
 }
 
+type Background = {
+  type: 'grid';
+} | {
+  type: 'image';
+  image: ImageState;
+};
+
+
 type Mode = "single" | "multi";
 
 type Queues = Record<string, string[]>; // Chain ID -> array of circle IDs
 
 type AppState = {
-    image: ImageState | null;
+    background: Background;
     circles: Circles;
     queues: Queues;
     activeChainId: string | null;
@@ -65,7 +73,7 @@ type AppState = {
 const SINGLE_CHAIN_ID = "main";
 
 export default function WordChainSolver() {
-  const [image, setImage] = useState<ImageState | null>(null);
+  const [background, setBackground] = useState<Background>({ type: 'grid' });
   const [circles, setCircles] = useState<Circles>({});
   const [queues, setQueues] = useState<Queues>({ [SINGLE_CHAIN_ID]: [] });
   const [activeChainId, setActiveChainId] = useState<string | null>(SINGLE_CHAIN_ID);
@@ -91,7 +99,7 @@ export default function WordChainSolver() {
       const savedState = localStorage.getItem("wordChainSolverState");
       if (savedState) {
           const state: AppState = JSON.parse(savedState);
-          setImage(state.image);
+          setBackground(state.background || { type: 'grid' });
           setCircles(state.circles);
           setQueues(state.queues || { [SINGLE_CHAIN_ID]: [] });
           setMode(state.mode || 'single');
@@ -110,7 +118,7 @@ export default function WordChainSolver() {
     if (isClient) {
       try {
         const stateToSave: AppState = {
-            image,
+            background,
             circles,
             queues,
             activeChainId,
@@ -124,7 +132,7 @@ export default function WordChainSolver() {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [image, circles, queues, activeChainId, mode, markerSize, wordList, wordConnections, isClient]);
+  }, [background, circles, queues, activeChainId, mode, markerSize, wordList, wordConnections, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -134,10 +142,13 @@ export default function WordChainSolver() {
         const dataUrl = reader.result as string;
         const img = new window.Image();
         img.onload = () => {
-            setImage({
-                src: dataUrl,
-                width: img.naturalWidth,
-                height: img.naturalHeight,
+            setBackground({
+                type: 'image',
+                image: {
+                    src: dataUrl,
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                }
             });
             handleClear(false);
         };
@@ -152,10 +163,10 @@ export default function WordChainSolver() {
       return;
     }
 
-    if (!imageRef.current || !activeChainId) return;
+    const container = e.currentTarget;
+    if (!container || !activeChainId) return;
 
-    const img = imageRef.current;
-    const rect = img.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
 
     const clickX = e.clientX;
     const clickY = e.clientY;
@@ -198,8 +209,8 @@ export default function WordChainSolver() {
     }
   };
 
-  const handleClear = (clearImage: boolean = true) => {
-    if(clearImage) setImage(null);
+  const handleClear = (clearBackground: boolean = true) => {
+    if(clearBackground) setBackground({ type: 'grid' });
     setCircles({});
     setQueues({ [SINGLE_CHAIN_ID]: [] });
     setActiveChainId(SINGLE_CHAIN_ID);
@@ -278,7 +289,7 @@ export default function WordChainSolver() {
     }
 
     const stateToSave: AppState = {
-      image,
+      background,
       circles,
       queues,
       activeChainId,
@@ -308,7 +319,7 @@ export default function WordChainSolver() {
         try {
           const loadedState: AppState = JSON.parse(event.target?.result as string);
           if (
-            'image' in loadedState &&
+            'background' in loadedState &&
             'circles' in loadedState &&
             'queues' in loadedState &&
             'activeChainId' in loadedState &&
@@ -317,7 +328,7 @@ export default function WordChainSolver() {
             'wordList' in loadedState &&
             'wordConnections' in loadedState
           ) {
-            setImage(loadedState.image);
+            setBackground(loadedState.background);
             setCircles(loadedState.circles);
             setQueues(loadedState.queues);
             setActiveChainId(loadedState.activeChainId);
@@ -347,9 +358,9 @@ export default function WordChainSolver() {
     words: string[],
     connections: Record<string, string[]>,
     globallyUsedWords: Set<string> = new Set()
-  ): { solution: string[], reasoning: string } => {
+  ): { solution: string[], reasoning: string }[] => {
     const totalLength = queue.length;
-    if (totalLength === 0) return { solution: [], reasoning: "Chain is empty." };
+    if (totalLength === 0) return [];
 
     const circleIdToIndices: Record<string, number[]> = {};
     queue.forEach((id, index) => {
@@ -361,41 +372,35 @@ export default function WordChainSolver() {
       char: allCircles[id]?.char,
       index
     })).filter(item => item.char);
+    
+    const solutions: { solution: string[], reasoning: string }[] = [];
 
     const findSolutions = (
       currentChain: string,
       usedWords: string[],
       lastWord: string | null
-    ): string[][] => {
+    ) => {
       if (currentChain.length > totalLength) {
-        return [];
+        return;
       }
       
       if (currentChain.length === totalLength) {
-        // Validate solution *after* it's fully built
-        for (const { char, index } of knownChars) {
-          if (currentChain[index] !== char) return [];
-        }
-        
-        for (const id in circleIdToIndices) {
-          const indices = circleIdToIndices[id];
-          if (indices.length > 1) {
-            const firstChar = currentChain[indices[0]];
-            for (let i = 1; i < indices.length; i++) {
-              if (currentChain[indices[i]] !== firstChar) return [];
-            }
-          }
-        }
-        return [usedWords];
+        solutions.push({
+          solution: usedWords,
+          reasoning: `Found a solution with the word chain: ${usedWords.join(" -> ")}`
+        });
+        return;
       }
+      
+      if (solutions.length > 0) return;
 
-      let solutions: string[][] = [];
-      const possibleNextWords = lastWord ? connections[lastWord] || [] : words;
+      const possibleNextWords = lastWord ? (connections[lastWord] || []) : words;
 
       for (const word of possibleNextWords) {
         if (usedWords.includes(word) || globallyUsedWords.has(word)) continue;
 
         const newChain = lastWord ? currentChain + word.slice(2) : word;
+        if(newChain.length > totalLength) continue;
         
         let possible = true;
         // Check only up to the length of the new chain
@@ -426,26 +431,14 @@ export default function WordChainSolver() {
         }
         if (!possible) continue;
         
-        const results = findSolutions(newChain, [...usedWords, word], word);
-        if (results.length > 0) return results; // Return first found solution
+        findSolutions(newChain, [...usedWords, word], word);
+        if (solutions.length > 0) return;
       }
-
-      return solutions;
     };
     
-    const solutions = findSolutions("", [], null);
+    findSolutions("", [], null);
     
-    if (solutions.length > 0) {
-      return {
-        solution: solutions[0],
-        reasoning: `Found a solution with the word chain: ${solutions[0].join(" -> ")}`,
-      };
-    } else {
-      return {
-        solution: [],
-        reasoning: "No valid word chain could be found to fit the puzzle constraints.",
-      };
-    }
+    return solutions;
   };
 
   type MultiSolution = Record<string, {solution: string[], chain: string}>;
@@ -457,66 +450,58 @@ export default function WordChainSolver() {
     connections: Record<string, string[]>
   ): { solution: MultiSolution | null, reasoning: string } => {
     
-    const chainIds = Object.keys(allQueues);
+    const chainEntries = Object.entries(allQueues).filter(([,q]) => q.length > 0);
 
     const findMultiSolutions = (
       chainIndex: number,
       currentSolutions: MultiSolution,
       usedWords: Set<string>
     ): MultiSolution | null => {
-      if (chainIndex >= chainIds.length) {
+      if (chainIndex >= chainEntries.length) {
         return currentSolutions; // All chains solved
       }
 
-      const chainId = chainIds[chainIndex];
-      const queue = allQueues[chainId];
+      const [chainId, queue] = chainEntries[chainIndex];
 
-      // Create a temporary circle mapping that includes results from previous chains
       const tempCircles: Circles = { ...allCircles };
-      Object.values(currentSolutions).forEach(sol => {
-          const solQueue = allQueues[sol.solution[0]]; // This is not quite right. Need to map solution back to chainId.
-          // Let's find the chainId for the current solution
-          const solvedChainId = Object.keys(allQueues).find(id => currentSolutions[id] === sol);
-          if (solvedChainId) {
-            const q = allQueues[solvedChainId];
-            q.forEach((cId, idx) => {
-              if (idx < sol.chain.length) {
-                if (!tempCircles[cId]?.char) { // Don't override existing clues
-                  tempCircles[cId] = { ...tempCircles[cId], char: sol.chain[idx] };
-                }
+      Object.entries(currentSolutions).forEach(([solvedChainId, sol]) => {
+          const q = allQueues[solvedChainId];
+          q.forEach((cId, idx) => {
+            if (idx < sol.chain.length) {
+              if (!tempCircles[cId]?.char) { // Don't override existing clues
+                tempCircles[cId] = { ...tempCircles[cId], char: sol.chain[idx] };
               }
-            });
-          }
+            }
+          });
       });
       
-      const singleChainResult = solveSingleChain(queue, tempCircles, words, connections, usedWords);
+      const singleChainResults = solveSingleChain(queue, tempCircles, words, connections, usedWords);
 
-      if (singleChainResult.solution.length > 0) {
-        const newUsedWords = new Set([...usedWords, ...singleChainResult.solution]);
-        
-        let solutionString = "";
-        if (singleChainResult.solution.length > 0) {
-            solutionString = singleChainResult.solution[0];
-            for (let i = 1; i < singleChainResult.solution.length; i++) {
-                solutionString += singleChainResult.solution[i].slice(2);
+      for (const result of singleChainResults) {
+        if (result.solution.length > 0) {
+            const newUsedWords = new Set([...usedWords, ...result.solution]);
+            
+            let solutionString = "";
+            if (result.solution.length > 0) {
+                solutionString = result.solution[0];
+                for (let i = 1; i < result.solution.length; i++) {
+                    solutionString += result.solution[i].slice(2);
+                }
             }
+
+            const newSolutions: MultiSolution = {
+                ...currentSolutions,
+                [chainId]: {
+                    solution: result.solution,
+                    chain: solutionString,
+                }
+            };
+            
+            const finalSolution = findMultiSolutions(chainIndex + 1, newSolutions, newUsedWords);
+            if (finalSolution) return finalSolution;
         }
-
-        const newSolutions: MultiSolution = {
-            ...currentSolutions,
-            [chainId]: {
-                solution: singleChainResult.solution,
-                chain: solutionString,
-            }
-        };
-        
-        // This is a bit of a hack. Since solveSingleChain doesn't return ALL solutions,
-        // we can't properly backtrack. For now, we proceed with the first solution found.
-        // A more robust implementation would have solveSingleChain as a generator or return all solutions.
-        return findMultiSolutions(chainIndex + 1, newSolutions, newUsedWords);
       }
-
-      return null; // No solution found for this chain, backtrack
+      return null;
     };
     
     const finalSolution = findMultiSolutions(0, {}, new Set());
@@ -560,9 +545,10 @@ export default function WordChainSolver() {
           return;
         }
 
-        const result = solveSingleChain(activeQueue, circles, words, wordConnections);
+        const results = solveSingleChain(activeQueue, circles, words, wordConnections);
         
-        if (result.solution.length > 0) {
+        if (results.length > 0) {
+          const result = results[0];
           let solutionString = "";
           if (result.solution.length > 0) {
             solutionString = result.solution[0];
@@ -579,7 +565,7 @@ export default function WordChainSolver() {
           setCircles(updatedCircles);
           toast({ title: "Solution Found!", description: result.reasoning });
         } else {
-          toast({ variant: "destructive", title: "No Solution Found", description: result.reasoning });
+          toast({ variant: "destructive", title: "No Solution Found", description: "No valid word chain found." });
         }
       } else { // Multi-chain mode
         const result = solveMultiChain(queues, circles, words, wordConnections);
@@ -695,11 +681,11 @@ export default function WordChainSolver() {
                 </div>
             )}
             <div className="h-6 border-l mx-2"></div>
-            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving || !image}>
+            <Button onClick={handleFindSolution} variant="default" size="sm" disabled={isSolving}>
                 <Wand2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
             </Button>
-            <Button onClick={() => setIsSaveDialogOpen(true)} variant="outline" size="sm" disabled={!image}>
+            <Button onClick={() => setIsSaveDialogOpen(true)} variant="outline" size="sm">
                 <Save className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Save</span>
             </Button>
@@ -739,7 +725,7 @@ export default function WordChainSolver() {
             </Popover>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" disabled={!image}>
+              <Button variant="outline" size="icon">
                 <Settings2 className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -779,7 +765,7 @@ export default function WordChainSolver() {
               </div>
             </PopoverContent>
           </Popover>
-          <Button onClick={() => handleClear(true)} variant="ghost" size="sm" disabled={!image}>
+          <Button onClick={() => handleClear(true)} variant="ghost" size="sm">
             <X className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Clear</span>
           </Button>
@@ -795,14 +781,14 @@ export default function WordChainSolver() {
         </div>
       </header>
       <main className="relative flex-grow" onClick={handleContainerClick}>
-        {isClient && image ? (
+        {isClient && background.type === 'image' ? (
           <div className="absolute inset-0 p-2 sm:p-4">
             <div className="relative h-full w-full">
               <Image
                 ref={imageRef}
-                src={image.src}
-                width={image.width}
-                height={image.height}
+                src={background.image.src}
+                width={background.image.width}
+                height={background.image.height}
                 alt="Uploaded content for marking"
                 className="h-full w-full select-none object-contain drop-shadow-lg"
                 priority
@@ -840,11 +826,38 @@ export default function WordChainSolver() {
             </div>
           </div>
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <UploadCloud className="mx-auto h-12 w-12" />
-              <p className="mt-4 text-lg font-medium">Upload an image to start marking</p>
-            </div>
+          <div className="relative h-full w-full p-2 sm:p-4">
+             <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
+             {Object.entries(circles).map(([id, circle]) => {
+                const isInActiveQueue = activeQueue.includes(id);
+                const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
+
+                return (
+                <div
+                  key={id}
+                  data-circle-id={id}
+                  className={cn(
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                    isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
+                    isInActiveQueue && (clickCountInActiveQueue > 1 ? "bg-accent" : "bg-primary/30")
+                  )}
+                  style={{
+                    left: `${circle.x * 100}%`,
+                    top: `${circle.y * 100}%`,
+                    width: `${markerSize}px`,
+                    height: `${markerSize}px`,
+                    fontSize: `${markerSize * 0.6}px`,
+                    zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCircleClick(id);
+                  }}
+                  aria-hidden="true"
+                >
+                  {circle.char}
+                </div>
+              )})}
           </div>
         )}
       </main>
