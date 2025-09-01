@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { solveSingleChain, solveMultiChain } from '@/lib/solver';
+import { solveSingleChain, solveMultiChain, generateConnections } from '@/lib/solver';
 
 
 export type Circle = {
@@ -267,18 +267,7 @@ export default function WordChainSolver() {
   };
 
   const processWordList = () => {
-    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-    const newConnections: Record<string, string[]> = {};
-
-    for (const keyWord of words) {
-        newConnections[keyWord] = [];
-        for (const otherWord of words) {
-            if (keyWord === otherWord) continue;
-            if (keyWord.slice(-2) === otherWord.slice(0, 2)) {
-                newConnections[keyWord].push(otherWord);
-            }
-        }
-    }
+    const newConnections = generateConnections(wordList);
     setWordConnections(newConnections);
     console.log("Word Connections:", newConnections);
   }
