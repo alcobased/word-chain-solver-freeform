@@ -231,4 +231,43 @@ describe('solveSingleChain', () => {
             expect(results).toHaveLength(0);
         });
     });
+
+    describe('with edge cases', () => {
+        let circles: Circles;
+        let queue: string[];
+        let words: string[];
+        let connections: Record<string, string[]>;
+
+        beforeEach(() => {
+            circles = { 'c0': { x: 0, y: 0 }};
+            queue = ['c0'];
+            words = ['TEST'];
+            connections = { 'TEST': [] };
+        });
+
+        it('should return no solutions for an empty queue', () => {
+            const emptyQueue: string[] = [];
+            const results = solveSingleChain(emptyQueue, circles, words, connections);
+            expect(results).toHaveLength(0);
+        });
+
+        it('should return no solutions for an empty word list', () => {
+            const emptyWords: string[] = [];
+            const emptyConnections = generateConnections('');
+            const results = solveSingleChain(queue, circles, emptyWords, emptyConnections);
+            expect(results).toHaveLength(0);
+        });
+
+        it('should return no solutions when no words can be connected', () => {
+            const circles: Circles = {};
+            const wordList = 'HELLO WORLD';
+            const unconnectedWords = wordList.split(' ');
+            const unconnectedConnections = generateConnections(wordList);
+            const longQueue = Array.from({ length: 10 }, (_, i) => `c${i}`);
+            longQueue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+
+            const results = solveSingleChain(longQueue, circles, unconnectedWords, unconnectedConnections);
+            expect(results).toHaveLength(0);
+        });
+    });
 });
