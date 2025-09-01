@@ -25,18 +25,17 @@ describe('generateConnections', () => {
 
 describe('solveSingleChain', () => {
     describe('with unrestricted queue', () => {
-        let queue: string[];
         let circles: Circles;
 
         beforeEach(() => {
-            queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
             circles = {};
-            queue.forEach(id => {
-                circles[id] = { x: 0, y: 0 };
-            });
         });
 
         it('should find a valid 12-letter chain and only one', () => {
+            const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
+            queue.forEach(id => {
+                circles[id] = { x: 0, y: 0 };
+            });
             const wordList = 'TOAST STOP OPEN ENTER';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
             const connections = generateConnections(wordList);
@@ -61,6 +60,10 @@ describe('solveSingleChain', () => {
         });
 
         it('should find 2 valid solutions when multiple chains are possible', () => {
+            const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
+            queue.forEach(id => {
+                circles[id] = { x: 0, y: 0 };
+            });
             const wordList = 'TOAST STOP OPEN ENTER COAST';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
             const connections = generateConnections(wordList);
@@ -81,6 +84,24 @@ describe('solveSingleChain', () => {
 
             expect(constructedChains).toContain('TOASTOPENTER');
             expect(constructedChains).toContain('COASTOPENTER');
+        });
+
+        it('should return no solutions for invalid chain lengths', () => {
+            const wordList = 'TOAST STOP OPEN ENTER';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+            
+            // Test with a length that is too long
+            const longQueue = Array.from({ length: 14 }, (_, i) => `c${i}`);
+            longQueue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+            const longResult = solveSingleChain(longQueue, circles, words, connections);
+            expect(longResult).toHaveLength(0);
+
+            // Test with a length that is too short
+            const shortQueue = Array.from({ length: 3 }, (_, i) => `c${i}`);
+            shortQueue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+            const shortResult = solveSingleChain(shortQueue, circles, words, connections);
+            expect(shortResult).toHaveLength(0);
         });
     });
 });
