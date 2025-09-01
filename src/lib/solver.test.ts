@@ -104,4 +104,8 @@ describe('solveSingleChain', () => {
             expect(shortResult).toHaveLength(0);
         });
     });
+
+    describe('with repeating ids (chain crosses itself)', () => {
+
+    });
 });
