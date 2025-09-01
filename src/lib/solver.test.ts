@@ -194,4 +194,41 @@ describe('solveSingleChain', () => {
             expect(result[0].solution).toEqual(['TOAST', 'STOP', 'OPEN', 'ENTER']);
         });
     });
+    
+    describe('with crossovers and pre-filled characters', () => {
+        let circles: Circles;
+        let queue: string[];
+        let words: string[];
+        let connections: Record<string, string[]>;
+
+        beforeEach(() => {
+            circles = {};
+            // "LEADER" -> "ERASER" = LEADERASER (10 letters)
+            queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c1', 'c5'];
+            queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
+
+            const wordList = 'LEADER ERASER';
+            words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            connections = generateConnections(wordList);
+        });
+
+        it('should find a solution with a valid pre-filled crossover character', () => {
+            // c1 is at indices 1 and 8. In 'LEADERASER', this is 'E'.
+            circles['c1'].char = 'E';
+
+            const results = solveSingleChain(queue, circles, words, connections);
+
+            expect(results).toHaveLength(1);
+            expect(results[0].solution).toEqual(['LEADER', 'ERASER']);
+        });
+
+        it('should not find a solution with an invalid pre-filled crossover character', () => {
+            // c1 is at indices 1 and 8, which should be 'E'.
+            circles['c1'].char = 'X';
+
+            const results = solveSingleChain(queue, circles, words, connections);
+
+            expect(results).toHaveLength(0);
+        });
+    });
 });
