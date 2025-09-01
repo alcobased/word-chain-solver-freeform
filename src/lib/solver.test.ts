@@ -26,16 +26,17 @@ describe('generateConnections', () => {
 describe('solveSingleChain', () => {
     describe('with unrestricted queue', () => {
         let circles: Circles;
+        let queue: string[];
 
         beforeEach(() => {
             circles = {};
-        });
-
-        it('should find a valid 12-letter chain and only one', () => {
-            const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
+            queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
             queue.forEach(id => {
                 circles[id] = { x: 0, y: 0 };
             });
+        });
+
+        it('should find a valid 12-letter chain and only one', () => {
             const wordList = 'TOAST STOP OPEN ENTER';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
             const connections = generateConnections(wordList);
@@ -60,10 +61,6 @@ describe('solveSingleChain', () => {
         });
 
         it('should find 2 valid solutions when multiple chains are possible', () => {
-            const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
-            queue.forEach(id => {
-                circles[id] = { x: 0, y: 0 };
-            });
             const wordList = 'TOAST STOP OPEN ENTER COAST';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
             const connections = generateConnections(wordList);
@@ -90,6 +87,7 @@ describe('solveSingleChain', () => {
             const wordList = 'TOAST STOP OPEN ENTER';
             const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
             const connections = generateConnections(wordList);
+            const circles: Circles = {};
             
             // Test with a length that is too long
             const longQueue = Array.from({ length: 14 }, (_, i) => `c${i}`);
@@ -114,8 +112,9 @@ describe('solveSingleChain', () => {
 
         it('should find a solution that respects the crossover character constraint', () => {
             // "LEADER" -> "ERASER" = LEADERASER (10 letters)
-            // 'E' is at indices 1, 5, 8.
-            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c1', 'c9'];
+            // 'E' is at indices 1 and 8. 'R' is at indices 5 and 9.
+            // c1 corresponds to 'E', c5 corresponds to 'R'.
+            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c1', 'c5'];
             queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
 
             const wordList = 'LEADER ERASER';
@@ -130,9 +129,8 @@ describe('solveSingleChain', () => {
 
         it('should not find a solution if the crossover characters do not match', () => {
             // "LEADER" -> "ERASER" = LEADERASER (10 letters)
-            // Crossover point 'c1' is at index 1 ('E') and index 5 ('E').
-            // Crossover point 'c2' is at index 2 ('A') and index 8 ('E'). This should fail.
-            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c2', 'c9'];
+            // Crossover point 'c1' is at index 1 ('E') and index 5 ('R'). This should fail.
+            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c8', 'c9'];
              queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
 
             const wordList = 'LEADER ERASER';
