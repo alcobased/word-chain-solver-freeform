@@ -49,36 +49,10 @@ export const solveSingleChain = (
 
     // Base case: If we have a potential full chain
     if (currentLength === totalLength) {
-        let possible = true;
-        // Final check for all constraints
-        for (const { char, index } of knownChars) {
-            if (currentChain[index] !== char) {
-                possible = false;
-                break;
-            }
-        }
-        if (!possible) return;
-
-        for (const id in circleIdToIndices) {
-            const indices = circleIdToIndices[id];
-            if (indices.length > 1) {
-                const firstChar = currentChain[indices[0]];
-                for (let i = 1; i < indices.length; i++) {
-                    if (currentChain[indices[i]] !== firstChar) {
-                        possible = false;
-                        break;
-                    }
-                }
-            }
-            if (!possible) break;
-        }
-
-        if (possible) {
-            solutions.push({
-                solution: usedWords,
-                reasoning: `Found a solution with the word chain: ${usedWords.join(" -> ")}`
-            });
-        }
+        solutions.push({
+            solution: usedWords,
+            reasoning: `Found a solution with the word chain: ${usedWords.join(" -> ")}`
+        });
         return;
     }
 
@@ -131,7 +105,33 @@ export const solveSingleChain = (
   
   findSolutions("", [], null);
   
-  return solutions;
+  // Post-filter solutions to ensure all constraints are met on the final chain
+  return solutions.filter(s => {
+      let solutionChain = "";
+      if(s.solution.length > 0) {
+          solutionChain = s.solution[0];
+          for(let i = 1; i < s.solution.length; i++) {
+              solutionChain += s.solution[i].slice(2);
+          }
+      }
+
+      if (solutionChain.length !== totalLength) return false;
+
+      for (const { char, index } of knownChars) {
+          if (solutionChain[index] !== char) return false;
+      }
+
+      for (const id in circleIdToIndices) {
+          const indices = circleIdToIndices[id];
+          if (indices.length > 1) {
+              const firstChar = solutionChain[indices[0]];
+              for (let i = 1; i < indices.length; i++) {
+                  if (solutionChain[indices[i]] !== firstChar) return false;
+              }
+          }
+      }
+      return true;
+  });
 };
 
 export type MultiSolution = Record<string, {solution: string[], chain: string}>;
