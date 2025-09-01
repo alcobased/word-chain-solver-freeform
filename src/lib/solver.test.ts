@@ -37,10 +37,9 @@ describe('solveSingleChain', () => {
 
         const result = solveSingleChain(queue, circles, words, connections);
 
-        expect(result.length).toBeGreaterThan(0);
+        expect(result.length).toBe(1);
         
         const solution = result[0];
-        console.log(solution);
         const solutionWords = solution.solution;
         let constructedChain = "";
         if (solutionWords.length > 0) {
