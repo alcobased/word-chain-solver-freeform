@@ -24,16 +24,21 @@ describe('generateConnections', () => {
 });
 
 describe('solveSingleChain', () => {
+    let queue: string[];
+    let circles: Circles;
+
+    beforeEach(() => {
+        queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
+        circles = {};
+        queue.forEach(id => {
+            circles[id] = { x: 0, y: 0 };
+        });
+    });
+
     it('should find a valid 12-letter chain and only one', () => {
         const wordList = 'TOAST STOP OPEN ENTER';
         const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
         const connections = generateConnections(wordList);
-
-        const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
-        const circles: Circles = {};
-        queue.forEach(id => {
-            circles[id] = { x: 0, y: 0 };
-        });
 
         const result = solveSingleChain(queue, circles, words, connections);
 
@@ -58,12 +63,6 @@ describe('solveSingleChain', () => {
         const wordList = 'TOAST STOP OPEN ENTER COAST';
         const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
         const connections = generateConnections(wordList);
-
-        const queue = Array.from({ length: 12 }, (_, i) => `c${i}`);
-        const circles: Circles = {};
-        queue.forEach(id => {
-            circles[id] = { x: 0, y: 0 };
-        });
 
         const results = solveSingleChain(queue, circles, words, connections);
 
