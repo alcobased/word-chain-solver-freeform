@@ -106,6 +106,42 @@ describe('solveSingleChain', () => {
     });
 
     describe('with repeating ids (chain crosses itself)', () => {
+        let circles: Circles;
 
+        beforeEach(() => {
+            circles = {};
+        });
+
+        it('should find a solution that respects the crossover character constraint', () => {
+            // "LEADER" -> "ERASER" = LEADERASER (10 letters)
+            // 'E' is at indices 1, 5, 8.
+            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c1', 'c9'];
+            queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+
+            const wordList = 'LEADER ERASER';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+            
+            const results = solveSingleChain(queue, circles, words, connections);
+
+            expect(results).toHaveLength(1);
+            expect(results[0].solution).toEqual(['LEADER', 'ERASER']);
+        });
+
+        it('should not find a solution if the crossover characters do not match', () => {
+            // "LEADER" -> "ERASER" = LEADERASER (10 letters)
+            // Crossover point 'c1' is at index 1 ('E') and index 5 ('E').
+            // Crossover point 'c2' is at index 2 ('A') and index 8 ('E'). This should fail.
+            const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c2', 'c9'];
+             queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+
+            const wordList = 'LEADER ERASER';
+            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+            const connections = generateConnections(wordList);
+            
+            const results = solveSingleChain(queue, circles, words, connections);
+
+            expect(results).toHaveLength(0);
+        });
     });
 });
