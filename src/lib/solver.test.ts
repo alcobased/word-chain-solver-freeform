@@ -40,6 +40,7 @@ describe('solveSingleChain', () => {
         expect(result.length).toBeGreaterThan(0);
         
         const solution = result[0];
+        console.log(solution);
         const solutionWords = solution.solution;
         let constructedChain = "";
         if (solutionWords.length > 0) {

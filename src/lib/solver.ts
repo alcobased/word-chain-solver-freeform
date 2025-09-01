@@ -45,8 +45,6 @@ export const solveSingleChain = (
     usedWords: string[],
     lastWord: string | null
   ) => {
-    if (solutions.length > 0) return; // Stop after finding one solution
-
     const currentLength = currentChain.length;
 
     // Base case: If we have a potential full chain
@@ -128,7 +126,6 @@ export const solveSingleChain = (
         if (!possible) continue;
         
         findSolutions(newChain, [...usedWords, word], word);
-        if (solutions.length > 0) return;
     }
   };
   
