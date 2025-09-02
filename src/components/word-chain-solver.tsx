@@ -645,11 +645,10 @@ export default function WordChainSolver() {
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
                     {
-                      "border-accent ring-2 ring-white bg-accent": isSelected, // Most prominent: selected
-                      "border-primary ring-2 ring-white": !isSelected && isInActiveQueue, // In chain but not selected
-                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue, // Not in chain, not selected
-                      "bg-accent/70": !isSelected && clickCountInActiveQueue > 1, // Crossover point
-                      "bg-primary/30": !isSelected && clickCountInActiveQueue === 1, // Standard chain point
+                      "border-accent ring-2 ring-white bg-accent": isSelected,
+                      "border-destructive ring-2 ring-white bg-destructive/70": !isSelected && clickCountInActiveQueue > 1,
+                      "border-primary ring-2 ring-white bg-primary/30": !isSelected && clickCountInActiveQueue === 1,
+                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue,
                     }
                   )}
                   style={{
@@ -683,11 +682,10 @@ export default function WordChainSolver() {
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
                     {
-                      "border-accent ring-2 ring-white bg-accent": isSelected, // Most prominent: selected
-                      "border-primary ring-2 ring-white": !isSelected && isInActiveQueue, // In chain but not selected
-                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue, // Not in chain, not selected
-                      "bg-accent/70": !isSelected && clickCountInActiveQueue > 1, // Crossover point
-                      "bg-primary/30": !isSelected && clickCountInActiveQueue === 1, // Standard chain point
+                      "border-accent ring-2 ring-white bg-accent": isSelected,
+                      "border-destructive ring-2 ring-white bg-destructive/70": !isSelected && clickCountInActiveQueue > 1,
+                      "border-primary ring-2 ring-white bg-primary/30": !isSelected && clickCountInActiveQueue === 1,
+                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue,
                     }
                   )}
                   style={{
