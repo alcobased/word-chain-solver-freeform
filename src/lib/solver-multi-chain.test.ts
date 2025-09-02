@@ -7,7 +7,7 @@ describe('solveMultiChain', () => {
   let connections: Record<string, string[]>;
 
   beforeEach(() => {
-    const wordList = 'APPLE ENDS STEAK KEEPS STRAY YACHT';
+    const wordList = 'MAST STAND SPEED EDGE';
     words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
     connections = generateConnections(wordList);
   });
