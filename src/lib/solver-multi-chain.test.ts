@@ -48,8 +48,8 @@ describe('solveMultiChain', () => {
     });
     
     it('should find all possible solutions when multiple words are valid', () => {
-      const extraWords = 'POST CAST GEMS GERM'.toUpperCase();
-      const extendedWordList = words.join(' ') + ' ' + extraWords;
+      const extraWords = 'POST CAST GEMS GERM';
+      const extendedWordList = words.join(' ') + ' ' + extraWords.toUpperCase();
       const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
       const extendedConnections = generateConnections(extendedWordList);
       
@@ -68,20 +68,13 @@ describe('solveMultiChain', () => {
     it('should respect pre-filled character constraints', () => {
         circles['c0'] = { ...circles['c0'], char: 'M' }; // First char of chain1 must be 'M'
         
-        const extraWords = 'CAST STEED';
-        const extendedWordList = words.join(' ') + ' ' + extraWords;
+        const extraWords = 'POST CAST GEMS GERM';
+        const extendedWordList = words.join(' ') + ' ' + extraWords.toUpperCase();
         const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
         const extendedConnections = generateConnections(extendedWordList);
         
         const result = solveMultiChain(queues, circles, extendedWords, extendedConnections);
         
-        // Solutions for chain1 can only be MASTAND or MASTEED (2)
-        // Solutions for chain2 can be SPEEDGEAR or STEEDGEAR (2)
-        // But MASTEED and STEEDGEAR can't be in the same solution.
-        // MASTAND -> SPEEDGEAR
-        // MASTAND -> STEEDGEAR
-        // MASTEED -> SPEEDGEAR
-        // Total should be 3
         expect(result.solutions).toHaveLength(3);
         result.solutions.forEach(solutionSet => {
             expect(solutionSet.chain1.chain.startsWith('M')).toBe(true);
