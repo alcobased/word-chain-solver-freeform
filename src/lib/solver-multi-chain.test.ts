@@ -1,6 +1,6 @@
 
 import { generateConnections, solveMultiChain } from './solver';
-import type { Circles, Queues, MultiSolution } from './solver';
+import type { Circles, Queues, MultiSolution } from '@/components/word-chain-solver';
 
 describe('solveMultiChain', () => {
   let words: string[];
