@@ -7,9 +7,9 @@ describe('solveMultiChain', () => {
   let connections: Record<string, string[]>;
 
   beforeEach(() => {
-    const wordList = 'MAST STAND SPEED EDGE GEAR';
-    words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-    connections = generateConnections(wordList);
+    const wordLists = ['MAST STAND SPEED EDGE GEAR'];
+    words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+    connections = generateConnections(wordLists);
   });
 
   describe('with disjointed chains', () => {
@@ -49,9 +49,9 @@ describe('solveMultiChain', () => {
     
     it('should find all possible solutions when multiple words are valid', () => {
       const extraWords = 'POST CAST GEMS GERM';
-      const extendedWordList = words.join(' ') + ' ' + extraWords.toUpperCase();
-      const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-      const extendedConnections = generateConnections(extendedWordList);
+      const extendedWordLists = [...words.join(' ').split(' '), ...extraWords.toUpperCase().split(' ')].join(' ').split('\n');
+      const extendedWords = extendedWordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+      const extendedConnections = generateConnections(extendedWordLists);
       
       const result = solveMultiChain(queues, circles, extendedWords, extendedConnections);
       
@@ -69,9 +69,9 @@ describe('solveMultiChain', () => {
         circles['c0'] = { ...circles['c0'], char: 'M' }; // First char of chain1 must be 'M'
         
         const extraWords = 'POST CAST GEMS GERM';
-        const extendedWordList = words.join(' ') + ' ' + extraWords.toUpperCase();
-        const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-        const extendedConnections = generateConnections(extendedWordList);
+        const extendedWordLists = [...words.join(' ').split(' '), ...extraWords.toUpperCase().split(' ')].join(' ').split('\n');
+        const extendedWords = extendedWordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+        const extendedConnections = generateConnections(extendedWordLists);
         
         const result = solveMultiChain(queues, circles, extendedWords, extendedConnections);
         

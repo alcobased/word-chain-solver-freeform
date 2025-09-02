@@ -5,7 +5,7 @@ import type { Circles } from '@/components/word-chain-solver';
 
 describe('generateConnections', () => {
     it('should generate correct connections from a word list', () => {
-      const wordList = 'TOAST STAND STOP OPEN ENTER';
+      const wordLists = ['TOAST STAND STOP OPEN ENTER'];
       const expectedConnections = {
         TOAST: ['STAND', 'STOP'],
         STAND: [],
@@ -14,13 +14,21 @@ describe('generateConnections', () => {
         ENTER: [],
       };
   
-      const result = generateConnections(wordList);
+      const result = generateConnections(wordLists);
   
       // Sort arrays for consistent comparison
       Object.values(result).forEach(arr => arr.sort());
       Object.values(expectedConnections).forEach(arr => arr.sort());
   
       expect(result).toEqual(expectedConnections);
+    });
+
+    it('should not connect words from different lists', () => {
+        const wordLists = ['CAST MAST', 'STEP MIST']; // CAST and STEP should not connect
+        const result = generateConnections(wordLists);
+
+        expect(result['CAST']).not.toContain('STEP');
+        expect(result['MAST']).not.toContain('MIST');
     });
 });
 
@@ -38,9 +46,9 @@ describe('solveSingleChain', () => {
         });
 
         it('should find a valid 12-letter chain and only one', () => {
-            const wordList = 'TOAST STOP OPEN ENTER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
 
             const result = solveSingleChain(queue, circles, words, connections);
 
@@ -62,9 +70,9 @@ describe('solveSingleChain', () => {
         });
 
         it('should find 2 valid solutions when multiple chains are possible', () => {
-            const wordList = 'TOAST STOP OPEN ENTER COAST';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER COAST'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
 
             const results = solveSingleChain(queue, circles, words, connections);
 
@@ -85,9 +93,9 @@ describe('solveSingleChain', () => {
         });
 
         it('should return no solutions for invalid chain lengths', () => {
-            const wordList = 'TOAST STOP OPEN ENTER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
             const circles: Circles = {};
             
             // Test with a length that is too long
@@ -118,9 +126,9 @@ describe('solveSingleChain', () => {
             const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c1', 'c5'];
             queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
 
-            const wordList = 'LEADER ERASER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['LEADER ERASER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
             
             const results = solveSingleChain(queue, circles, words, connections);
 
@@ -134,9 +142,9 @@ describe('solveSingleChain', () => {
             const queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c1', 'c6', 'c7', 'c8', 'c9'];
              queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
 
-            const wordList = 'LEADER ERASER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['LEADER ERASER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
             
             const results = solveSingleChain(queue, circles, words, connections);
 
@@ -160,9 +168,9 @@ describe('solveSingleChain', () => {
             // Chain is TOASTOPENTER. Character at index 2 is 'A'.
             circles['c2'].char = 'A';
 
-            const wordList = 'TOAST STOP OPEN ENTER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
 
             const result = solveSingleChain(queue, circles, words, connections);
             expect(result).toHaveLength(1);
@@ -173,9 +181,9 @@ describe('solveSingleChain', () => {
             // Chain is TOASTOPENTER. Character at index 2 is 'A', not 'X'.
             circles['c2'].char = 'X';
 
-            const wordList = 'TOAST STOP OPEN ENTER';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
 
             const result = solveSingleChain(queue, circles, words, connections);
             expect(result).toHaveLength(0);
@@ -186,9 +194,9 @@ describe('solveSingleChain', () => {
             // Clue at index 0 is 'T', so only TOAST... is valid.
             circles['c0'].char = 'T';
 
-            const wordList = 'TOAST STOP OPEN ENTER COAST';
-            const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            const connections = generateConnections(wordList);
+            const wordLists = ['TOAST STOP OPEN ENTER COAST'];
+            const words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists);
 
             const result = solveSingleChain(queue, circles, words, connections);
             expect(result).toHaveLength(1);
@@ -208,9 +216,9 @@ describe('solveSingleChain', () => {
             queue = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c1', 'c5'];
             queue.forEach(id => { if(!circles[id]) circles[id] = { x: 0, y: 0 }; });
 
-            const wordList = 'LEADER ERASER';
-            words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-            connections = generateConnections(wordList);
+            const wordLists = ['LEADER ERASER'];
+            words = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+            connections = generateConnections(wordLists);
         });
 
         it('should find a solution with a valid pre-filled crossover character', () => {
@@ -247,16 +255,16 @@ describe('solveSingleChain', () => {
             const circles: Circles = { 'c0': { x: 0, y: 0 }};
             const queue = ['c0'];
             const emptyWords: string[] = [];
-            const emptyConnections = generateConnections('');
+            const emptyConnections = generateConnections([]);
             const results = solveSingleChain(queue, circles, emptyWords, emptyConnections);
             expect(results).toHaveLength(0);
         });
 
         it('should return no solutions when no words can be connected', () => {
             const circles: Circles = {};
-            const wordList = 'HELLO WORLD';
-            const unconnectedWords = wordList.split(' ');
-            const unconnectedConnections = generateConnections(wordList);
+            const wordLists = ['HELLO WORLD'];
+            const unconnectedWords = wordLists.flatMap(list => list.split(' '));
+            const unconnectedConnections = generateConnections(wordLists);
             const longQueue = Array.from({ length: 10 }, (_, i) => `c${i}`);
             longQueue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
 
@@ -268,9 +276,9 @@ describe('solveSingleChain', () => {
     describe('with looped chains', () => {
         it('should find a solution for a looped chain', () => {
             const circles: Circles = {};
-            const wordList = 'STOP OPEN ENCASE SEREST';
-            const words = wordList.split(' ').map(w => w.toUpperCase());
-            const connections = generateConnections(wordList); 
+            const wordLists = ['STOP OPEN ENCASE SEREST'];
+            const words = wordLists.flatMap(list => list.split(' ').map(w => w.toUpperCase()));
+            const connections = generateConnections(wordLists); 
             
             const queue = Array.from({ length: 14 }, (_, i) => `c${i}`);
             // change queue so first id is same as 2nd to last id

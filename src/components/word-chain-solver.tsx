@@ -67,7 +67,7 @@ export type AppState = {
     activeChainId: string | null;
     mode: Mode;
     markerSize: number;
-    wordList: string;
+    wordLists: string[];
     wordConnections: Record<string, string[]>;
 }
 
@@ -81,7 +81,7 @@ export default function WordChainSolver() {
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("single");
   const [markerSize, setMarkerSize] = useState<number>(16);
-  const [wordList, setWordList] = useState<string>("");
+  const [wordLists, setWordLists] = useState<string[]>([""]);
   const [wordConnections, setWordConnections] = useState<Record<string, string[]>>({});
   const [isClient, setIsClient] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
@@ -107,7 +107,7 @@ export default function WordChainSolver() {
           setMode(state.mode || 'single');
           setActiveChainId(state.activeChainId || SINGLE_CHAIN_ID);
           setMarkerSize(state.markerSize);
-          setWordList(state.wordList);
+          setWordLists(state.wordLists || [""]);
           setWordConnections(state.wordConnections);
       }
     } catch (error) {
@@ -126,7 +126,7 @@ export default function WordChainSolver() {
             activeChainId,
             mode,
             markerSize,
-            wordList,
+            wordLists,
             wordConnections
         };
         localStorage.setItem("wordChainSolverState", JSON.stringify(stateToSave));
@@ -134,7 +134,7 @@ export default function WordChainSolver() {
         console.error("Failed to save data to localStorage", error);
       }
     }
-  }, [background, circles, queues, activeChainId, mode, markerSize, wordList, wordConnections, isClient]);
+  }, [background, circles, queues, activeChainId, mode, markerSize, wordLists, wordConnections, isClient]);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -224,7 +224,7 @@ export default function WordChainSolver() {
     setActiveChainId(SINGLE_CHAIN_ID);
     setSelectedCircleId(null);
     setMode("single");
-    setWordList("");
+    setWordLists([""]);
     setWordConnections({});
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -282,9 +282,12 @@ export default function WordChainSolver() {
   };
 
   const processWordList = () => {
-    const newConnections = generateConnections(wordList);
+    const newConnections = generateConnections(wordLists);
     setWordConnections(newConnections);
-    console.log("Word Connections:", newConnections);
+    toast({
+        title: "Word Lists Processed",
+        description: `Generated connections for ${Object.keys(newConnections).length} unique words.`
+    });
   }
 
   const handleSaveState = () => {
@@ -300,7 +303,7 @@ export default function WordChainSolver() {
       activeChainId,
       mode,
       markerSize,
-      wordList,
+      wordLists,
       wordConnections
     };
 
@@ -330,7 +333,7 @@ export default function WordChainSolver() {
             'activeChainId' in loadedState &&
             'mode' in loadedState &&
             'markerSize' in loadedState &&
-            'wordList' in loadedState &&
+            ('wordLists' in loadedState || 'wordList' in loadedState) && // For backwards compatibility
             'wordConnections' in loadedState
           ) {
             setBackground(loadedState.background);
@@ -339,7 +342,12 @@ export default function WordChainSolver() {
             setActiveChainId(loadedState.activeChainId);
             setMode(loadedState.mode);
             setMarkerSize(loadedState.markerSize);
-            setWordList(loadedState.wordList);
+            // Backwards compatibility for old save files with single 'wordList'
+            if ('wordLists' in loadedState) {
+                setWordLists(loadedState.wordLists);
+            } else if ('wordList' in loadedState) {
+                setWordLists([(loadedState as any).wordList]);
+            }
             setWordConnections(loadedState.wordConnections);
             setSelectedCircleId(null);
           } else {
@@ -359,12 +367,12 @@ export default function WordChainSolver() {
   };
 
   const handleFindSolution = async () => {
-    const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-    if (words.length === 0 || Object.keys(wordConnections).length === 0) {
+    const allWords = wordLists.flatMap(list => list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase()));
+    if (allWords.length === 0 || Object.keys(wordConnections).length === 0) {
       toast({
         variant: "destructive",
         title: "Cannot Find Solution",
-        description: "Please add a word list and process it before finding a solution.",
+        description: "Please add at least one word list and process it before finding a solution.",
       });
       return;
     }
@@ -383,7 +391,7 @@ export default function WordChainSolver() {
           return;
         }
 
-        const results = solveSingleChain(activeQueue, circles, words, wordConnections);
+        const results = solveSingleChain(activeQueue, circles, allWords, wordConnections);
         
         if (results.length > 0) {
           const result = results[0];
@@ -410,7 +418,7 @@ export default function WordChainSolver() {
           toast({ variant: "destructive", title: "No Solution Found", description: "No valid word chain found." });
         }
       } else { // Multi-chain mode
-        const result = solveMultiChain(queues, circles, words, wordConnections);
+        const result = solveMultiChain(queues, circles, allWords, wordConnections);
         if (result.solutions.length > 0) {
           const solutionSet = result.solutions[0];
           const updatedCircles = { ...circles };
@@ -488,6 +496,23 @@ export default function WordChainSolver() {
     setActiveChainId(Object.keys(newQueues)[0] ?? null);
   }
 
+  const handleWordListChange = (index: number, value: string) => {
+    const newWordLists = [...wordLists];
+    newWordLists[index] = value;
+    setWordLists(newWordLists);
+  };
+
+  const addWordList = () => {
+    setWordLists([...wordLists, ""]);
+  };
+
+  const removeWordList = (index: number) => {
+    if (wordLists.length > 1) {
+        const newWordLists = wordLists.filter((_, i) => i !== index);
+        setWordLists(newWordLists);
+    }
+  };
+
   const selectedCircleChar = selectedCircleId ? circles[selectedCircleId]?.char : '';
 
   return (
@@ -551,22 +576,45 @@ export default function WordChainSolver() {
                         <BookText className="h-4 w-4" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 z-[102]" align="end">
+                <PopoverContent className="w-96 z-[102]" align="end">
                     <div className="grid gap-4">
                         <div className="space-y-2">
-                            <h4 className="font-medium leading-none">Word List</h4>
+                            <h4 className="font-medium leading-none">Word Lists</h4>
                             <p className="text-sm text-muted-foreground">
-                                Enter a list of words, one per line.
+                                Enter word lists below. Connections are only made between words in the same list.
                             </p>
                         </div>
-                        <Textarea
-                            placeholder="Type your words here."
-                            className="w-full resize-y bg-background"
-                            rows={10}
-                            value={wordList}
-                            onChange={(e) => setWordList(e.target.value)}
-                        />
-                         <Button onClick={processWordList} disabled={!wordList.trim()}>Process Word List</Button>
+                        <div className="max-h-96 overflow-y-auto space-y-4 p-1">
+                            {wordLists.map((list, index) => (
+                                <div key={index} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor={`word-list-${index}`}>List {index + 1}</Label>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeWordList(index)}
+                                            disabled={wordLists.length <= 1}
+                                            className="h-6 w-6"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <Textarea
+                                        id={`word-list-${index}`}
+                                        placeholder={`Type words for list ${index + 1} here.`}
+                                        className="w-full resize-y bg-background"
+                                        rows={5}
+                                        value={list}
+                                        onChange={(e) => handleWordListChange(index, e.target.value)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                         <Button onClick={addWordList} variant="outline" size="sm">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Word List
+                        </Button>
+                         <Button onClick={processWordList} disabled={wordLists.every(l => !l.trim())}>Process Word Lists</Button>
                     </div>
                 </PopoverContent>
             </Popover>
@@ -738,5 +786,3 @@ export default function WordChainSolver() {
     </div>
   );
 }
-
-    

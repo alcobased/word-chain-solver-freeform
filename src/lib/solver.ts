@@ -1,20 +1,28 @@
 
 import type { Circles, Queues, MultiSolution } from '@/components/word-chain-solver';
 
-export const generateConnections = (wordList: string): Record<string, string[]> => {
-  const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-  const newConnections: Record<string, string[]> = {};
+export const generateConnections = (wordLists: string[]): Record<string, string[]> => {
+  const allConnections: Record<string, string[]> = {};
 
-  for (const keyWord of words) {
-      newConnections[keyWord] = [];
-      for (const otherWord of words) {
-          if (keyWord === otherWord) continue;
-          if (keyWord.slice(-2) === otherWord.slice(0, 2)) {
-              newConnections[keyWord].push(otherWord);
-          }
-      }
+  for (const list of wordLists) {
+    const words = list.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+    
+    for (const keyWord of words) {
+        if (!allConnections[keyWord]) {
+            allConnections[keyWord] = [];
+        }
+
+        for (const otherWord of words) {
+            if (keyWord === otherWord) continue;
+            if (keyWord.slice(-2) === otherWord.slice(0, 2)) {
+                if (!allConnections[keyWord].includes(otherWord)) {
+                    allConnections[keyWord].push(otherWord);
+                }
+            }
+        }
+    }
   }
-  return newConnections;
+  return allConnections;
 }
 
 export const solveSingleChain = (
