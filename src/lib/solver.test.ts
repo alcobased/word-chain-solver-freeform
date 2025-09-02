@@ -269,5 +269,32 @@ describe('solveSingleChain', () => {
             const results = solveSingleChain(longQueue, circles, unconnectedWords, unconnectedConnections);
             expect(results).toHaveLength(0);
         });
+
+        it('should find a solution for a looped chain', () => {
+            const circles: Circles = {};
+            const wordList = 'STOP OPEN ENCASE SEREST';
+            const loopedWords = wordList.split(' ').map(w => w.toUpperCase());
+            const loopedConnections = generateConnections(wordList + ' ' + 'RESTOP'); // Manually add loop connection for test
+            
+            const queue = Array.from({ length: 14 }, (_, i) => `c${i}`);
+            queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
+
+            const results = solveSingleChain(queue, circles, loopedWords, loopedConnections);
+
+            expect(results.length).toBeGreaterThan(0);
+            const solution = results.find(r => r.solution.join('') === 'STOPOPENENCASESEREST');
+            expect(solution).toBeDefined();
+
+            if (solution) {
+                let constructedChain = "";
+                if (solution.solution.length > 0) {
+                    constructedChain = solution.solution[0];
+                    for (let i = 1; i < solution.solution.length; i++) {
+                        constructedChain += solution.solution[i].slice(2);
+                    }
+                }
+                expect(constructedChain).toBe('STOPENCASEREST');
+            }
+        });
     });
 });

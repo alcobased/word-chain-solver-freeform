@@ -49,10 +49,20 @@ export const solveSingleChain = (
 
     // Base case: If we have a potential full chain
     if (currentLength === totalLength) {
-        solutions.push({
-            solution: usedWords,
-            reasoning: `Found a solution with the word chain: ${usedWords.join(" -> ")}`
-        });
+        // Check for loop condition
+        const firstWord = usedWords[0];
+        const currentLastWord = usedWords[usedWords.length - 1];
+        if(connections[currentLastWord]?.includes(firstWord)){
+            solutions.push({
+                solution: usedWords,
+                reasoning: `Found a looped solution with the word chain: ${usedWords.join(" -> ")}`
+            });
+        } else {
+             solutions.push({
+                solution: usedWords,
+                reasoning: `Found a solution with the word chain: ${usedWords.join(" -> ")}`
+            });
+        }
         return;
     }
 
