@@ -33,9 +33,10 @@ describe('solveMultiChain', () => {
 
     it('should solve for two separate chains, "MASTAND" and "SPEEDGEAR"', () => {
         const result = solveMultiChain(queues, circles, words, connections);
+        const { solutions } = result;
 
-        expect(result.solutions).toHaveLength(1);
-        const solution = result.solutions[0];
+        expect(solutions).toHaveLength(1);
+        const solution = solutions[0];
         
         expect(solution.chain1.solution).toEqual(['MAST', 'STAND']);
         expect(solution.chain1.chain).toEqual('MASTAND');
@@ -45,9 +46,9 @@ describe('solveMultiChain', () => {
 
         expect(result.reasoning).toContain('Successfully found 1 solution(s)');
     });
-
+    
     it('should find all possible solutions when multiple words are valid', () => {
-      const extraWords = 'post cast gems germ';
+      const extraWords = 'POST CAST GEMS GERM';
       const extendedWordList = words.join(' ') + ' ' + extraWords;
       const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
       const extendedConnections = generateConnections(extendedWordList);
