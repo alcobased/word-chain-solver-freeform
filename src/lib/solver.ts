@@ -1,5 +1,5 @@
 
-import type { Circles, Queues } from '@/components/word-chain-solver';
+import type { Circles, Queues, MultiSolution } from '@/components/word-chain-solver';
 
 export const generateConnections = (wordList: string): Record<string, string[]> => {
   const words = wordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
@@ -79,6 +79,10 @@ export const solveSingleChain = (
         const newChain = currentChain + nextPart;
         
         if (newChain.length > totalLength) continue;
+
+        if (lastWord && word.slice(0, 2) !== lastWord.slice(-2)) {
+            continue; 
+        }
         
         // Pruning: Check constraints as we build the chain
         let possible = true;
@@ -144,7 +148,6 @@ export const solveSingleChain = (
   });
 };
 
-export type MultiSolution = Record<string, {solution: string[], chain: string}>;
 
 export const solveMultiChain = (
   allQueues: Queues,
