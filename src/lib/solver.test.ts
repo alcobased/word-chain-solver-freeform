@@ -233,25 +233,18 @@ describe('solveSingleChain', () => {
     });
 
     describe('with edge cases', () => {
-        let circles: Circles;
-        let queue: string[];
-        let words: string[];
-        let connections: Record<string, string[]>;
-
-        beforeEach(() => {
-            circles = { 'c0': { x: 0, y: 0 }};
-            queue = ['c0'];
-            words = ['TEST'];
-            connections = { 'TEST': [] };
-        });
-
         it('should return no solutions for an empty queue', () => {
+            const circles: Circles = { 'c0': { x: 0, y: 0 }};
+            const words: string[] = ['TEST'];
+            const connections: Record<string, string[]> = { 'TEST': [] };
             const emptyQueue: string[] = [];
             const results = solveSingleChain(emptyQueue, circles, words, connections);
             expect(results).toHaveLength(0);
         });
 
         it('should return no solutions for an empty word list', () => {
+            const circles: Circles = { 'c0': { x: 0, y: 0 }};
+            const queue = ['c0'];
             const emptyWords: string[] = [];
             const emptyConnections = generateConnections('');
             const results = solveSingleChain(queue, circles, emptyWords, emptyConnections);
@@ -269,7 +262,9 @@ describe('solveSingleChain', () => {
             const results = solveSingleChain(longQueue, circles, unconnectedWords, unconnectedConnections);
             expect(results).toHaveLength(0);
         });
+    });
 
+    describe('with looped chains', () => {
         it('should find a solution for a looped chain', () => {
             const circles: Circles = {};
             const wordList = 'STOP OPEN ENCASE SEREST';
