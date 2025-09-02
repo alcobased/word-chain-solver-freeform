@@ -161,10 +161,7 @@ export default function WordChainSolver() {
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    // If the click is on an existing circle, the circle's own handler will stop propagation.
-    // This handler only fires when clicking the background.
-    
-    // If a circle is selected, deselect it.
+    // If a circle is selected, deselect it when clicking the background.
     if (selectedCircleId) {
         setSelectedCircleId(null);
         return;
@@ -175,13 +172,10 @@ export default function WordChainSolver() {
 
     const rect = container.getBoundingClientRect();
 
+    // Check if the click is within the container bounds
     const clickX = e.clientX;
     const clickY = e.clientY;
-
-    if (
-      clickX < rect.left || clickX > rect.right ||
-      clickY < rect.top || clickY > rect.bottom
-    ) {
+    if (clickX < rect.left || clickX > rect.right || clickY < rect.top || clickY > rect.bottom) {
       return;
     }
 
@@ -202,7 +196,6 @@ export default function WordChainSolver() {
         ...prevQueues,
         [activeChainId]: [...(prevQueues[activeChainId] ?? []), newCircleId]
     }));
-    setSelectedCircleId(newCircleId);
   };
   
   const handleCircleClick = (e: MouseEvent, clickedCircleId: string) => {
@@ -414,17 +407,20 @@ export default function WordChainSolver() {
         }
       } else { // Multi-chain mode
         const result = solveMultiChain(queues, circles, words, wordConnections);
-        if (result.solutions) {
+        if (result.solutions.length > 0) {
+          const solutionSet = result.solutions[0];
           const updatedCircles = { ...circles };
-          Object.values(result.solutions).forEach(({ chain: solutionString }, i) => {
-            const chainId = Object.keys(result.solutions!)[i];
-            const queue = queues[chainId];
-            queue.forEach((circleId, index) => {
-                if (index < solutionString.length && updatedCircles[circleId]) {
-                  updatedCircles[circleId] = { ...updatedCircles[circleId], char: solutionString[index] };
-                }
-            });
+          Object.entries(solutionSet).forEach(([chainId, solutionData]) => {
+              const queue = queues[chainId];
+              if (queue) {
+                  queue.forEach((circleId, index) => {
+                      if (index < solutionData.chain.length && updatedCircles[circleId]) {
+                          updatedCircles[circleId] = { ...updatedCircles[circleId], char: solutionData.chain[index] };
+                      }
+                  });
+              }
           });
+
           setCircles(updatedCircles);
           toast({ title: "Solution Found!", description: result.reasoning });
         } else {
@@ -648,9 +644,13 @@ export default function WordChainSolver() {
                   data-circle-id={id}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
-                    isSelected ? "border-accent ring-2 ring-white bg-accent" :
-                    isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
-                    isInActiveQueue && !isSelected && (clickCountInActiveQueue > 1 ? "bg-accent/70" : "bg-primary/30")
+                    {
+                      "border-accent ring-2 ring-white bg-accent": isSelected, // Most prominent: selected
+                      "border-primary ring-2 ring-white": !isSelected && isInActiveQueue, // In chain but not selected
+                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue, // Not in chain, not selected
+                      "bg-accent/70": !isSelected && clickCountInActiveQueue > 1, // Crossover point
+                      "bg-primary/30": !isSelected && clickCountInActiveQueue === 1, // Standard chain point
+                    }
                   )}
                   style={{
                     left: `${circle.x * 100}%`,
@@ -682,9 +682,13 @@ export default function WordChainSolver() {
                   data-circle-id={id}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
-                     isSelected ? "border-accent ring-2 ring-white bg-accent" :
-                    isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
-                    isInActiveQueue && !isSelected && (clickCountInActiveQueue > 1 ? "bg-accent/70" : "bg-primary/30")
+                    {
+                      "border-accent ring-2 ring-white bg-accent": isSelected, // Most prominent: selected
+                      "border-primary ring-2 ring-white": !isSelected && isInActiveQueue, // In chain but not selected
+                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue, // Not in chain, not selected
+                      "bg-accent/70": !isSelected && clickCountInActiveQueue > 1, // Crossover point
+                      "bg-primary/30": !isSelected && clickCountInActiveQueue === 1, // Standard chain point
+                    }
                   )}
                   style={{
                     left: `${circle.x * 100}%`,
