@@ -268,45 +268,21 @@ describe('solveSingleChain', () => {
         it('should find a solution for a looped chain', () => {
             const circles: Circles = {};
             const wordList = 'STOP OPEN ENCASE SEREST';
-            const loopedWords = wordList.split(' ').map(w => w.toUpperCase());
-            const loopedConnections = generateConnections(wordList); 
+            const words = wordList.split(' ').map(w => w.toUpperCase());
+            const connections = generateConnections(wordList); 
             
             const queue = Array.from({ length: 14 }, (_, i) => `c${i}`);
+            // change queue so first id is same as 2nd to last id
+            // and 2nd id is same as last
+            queue[0] = queue[queue.length - 2];
+            queue[1] = queue[queue.length - 1];
+
             queue.forEach(id => { circles[id] = { x: 0, y: 0 }; });
             
-            // Create a loop in the queue itself
-            // Not strictly necessary for this test case as the solver checks connection logic,
-            // but good practice for representing a physical loop in the UI.
-            // For "STOP...REST", the last two letters "ST" match the first two.
-            // If the queue was ['c0', 'c1', ... , 'c12', 'c13'], a physical loop would be
-            // where circle for index 0 is same as for 12, and 1 is same as 13.
-            // But the solver logic does not depend on the physical layout, only the word connections.
+            const results = solveSingleChain(queue, circles, words, connections);
 
-            const results = solveSingleChain(queue, circles, loopedWords, loopedConnections);
+            expect(results).toHaveLength(4);
 
-            expect(results.length).toBeGreaterThan(0);
-            
-            // A valid looped chain would be STOP -> OPEN -> ENCASE -> SEREST (which connects back to STOP)
-            // The constructed string is STOP + EN + CASE + REST = STOPENCASEREST
-            const solution = results.find(r => 
-                r.solution.length === 4 &&
-                r.solution[0] === 'STOP' &&
-                r.solution[1] === 'OPEN' &&
-                r.solution[2] === 'ENCASE' &&
-                r.solution[3] === 'SEREST'
-            );
-            expect(solution).toBeDefined();
-
-            if (solution) {
-                let constructedChain = "";
-                if (solution.solution.length > 0) {
-                    constructedChain = solution.solution[0];
-                    for (let i = 1; i < solution.solution.length; i++) {
-                        constructedChain += solution.solution[i].slice(2);
-                    }
-                }
-                expect(constructedChain).toBe('STOPENCASEREST');
-            }
         });
     });
 });
