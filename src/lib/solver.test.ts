@@ -1,4 +1,5 @@
 
+
 import { generateConnections, solveSingleChain, solveMultiChain } from './solver';
 import type { Circles, Queues } from '@/components/word-chain-solver';
 
@@ -282,7 +283,18 @@ describe('solveSingleChain', () => {
             const results = solveSingleChain(queue, circles, words, connections);
 
             expect(results).toHaveLength(4);
+            
+            const expectedSolutions = [
+                ['STOP', 'OPEN', 'ENCASE', 'SEREST'],
+                ['OPEN', 'ENCASE', 'SEREST', 'STOP'],
+                ['ENCASE', 'SEREST', 'STOP', 'OPEN'],
+                ['SEREST', 'STOP', 'OPEN', 'ENCASE'],
+            ];
 
+            const actualSolutions = results.map(r => r.solution);
+
+            expect(actualSolutions).toHaveLength(expectedSolutions.length);
+            expect(actualSolutions).toEqual(expect.arrayContaining(expectedSolutions));
         });
     });
 });
