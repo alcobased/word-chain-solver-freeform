@@ -161,11 +161,10 @@ export default function WordChainSolver() {
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('[data-circle-id]')) {
-      return;
-    }
+    // If the click is on an existing circle, the circle's own handler will stop propagation.
+    // This handler only fires when clicking the background.
     
-    // Deselect circle if clicking on the background
+    // If a circle is selected, deselect it.
     if (selectedCircleId) {
         setSelectedCircleId(null);
         return;
@@ -206,18 +205,9 @@ export default function WordChainSolver() {
     setSelectedCircleId(newCircleId);
   };
   
-  const handleCircleClick = (clickedCircleId: string) => {
-    if (!activeChainId) return;
-    
+  const handleCircleClick = (e: MouseEvent, clickedCircleId: string) => {
+    e.stopPropagation(); // Prevent handleContainerClick from firing.
     setSelectedCircleId(clickedCircleId);
-
-    const clickCountInActiveQueue = (queues[activeChainId] ?? []).filter(id => id === clickedCircleId).length;
-    if (clickCountInActiveQueue < 2) {
-        setQueues(prevQueues => ({
-            ...prevQueues,
-            [activeChainId]: [...(prevQueues[activeChainId] ?? []), clickedCircleId]
-        }));
-    }
   };
 
   const handleClear = (clearBackground: boolean = true) => {
@@ -263,21 +253,18 @@ export default function WordChainSolver() {
         [activeChainId]: newActiveQueue
     }));
     
+    // Deselect if we are removing the currently selected circle
     if (selectedCircleId === lastClickedId) {
-        setSelectedCircleId(newActiveQueue.length > 0 ? newActiveQueue[newActiveQueue.length - 1] : null);
+        setSelectedCircleId(null);
     }
-
-    // Check if the removed circle is part of any other queue
-    const isCircleUsedElsewhere = Object.values(queues).some(q => q.includes(lastClickedId));
     
-    if (!isCircleUsedElsewhere) {
-      // If it's not used anywhere else, remove the circle itself.
-      setCircles(prevCircles => {
+    // The circle was just created by a click, so we should remove it.
+    // If we change the logic to allow adding existing circles to a queue, this needs adjustment.
+    setCircles(prevCircles => {
         const newCircles = { ...prevCircles };
         delete newCircles[lastClickedId];
         return newCircles;
-      });
-    }
+    });
   };
 
   const processWordList = () => {
@@ -652,10 +639,7 @@ export default function WordChainSolver() {
                     fontSize: `${markerSize * 0.6}px`,
                     zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCircleClick(id);
-                  }}
+                  onClick={(e) => handleCircleClick(e, id)}
                   aria-hidden="true"
                 >
                   {circle.char}
@@ -689,10 +673,7 @@ export default function WordChainSolver() {
                     fontSize: `${markerSize * 0.6}px`,
                     zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCircleClick(id);
-                  }}
+                  onClick={(e) => handleCircleClick(e, id)}
                   aria-hidden="true"
                 >
                   {circle.char}
