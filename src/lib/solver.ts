@@ -151,17 +151,19 @@ export const solveMultiChain = (
   allCircles: Circles,
   words: string[],
   connections: Record<string, string[]>
-): { solution: MultiSolution | null, reasoning: string } => {
+): { solutions: MultiSolution[], reasoning: string } => {
   
   const chainEntries = Object.entries(allQueues).filter(([,q]) => q.length > 0);
+  let allSolutions: MultiSolution[] = [];
 
   const findMultiSolutions = (
     chainIndex: number,
     currentSolutions: MultiSolution,
     usedWords: Set<string>
-  ): MultiSolution | null => {
+  ) => {
     if (chainIndex >= chainEntries.length) {
-      return currentSolutions; // All chains solved
+      allSolutions.push(currentSolutions);
+      return;
     }
 
     const [chainId, queue] = chainEntries[chainIndex];
@@ -200,23 +202,21 @@ export const solveMultiChain = (
               }
           };
           
-          const finalSolution = findMultiSolutions(chainIndex + 1, newSolutions, newUsedWords);
-          if (finalSolution) return finalSolution;
+          findMultiSolutions(chainIndex + 1, newSolutions, newUsedWords);
       }
     }
-    return null;
   };
   
-  const finalSolution = findMultiSolutions(0, {}, new Set());
+  findMultiSolutions(0, {}, new Set());
 
-  if (finalSolution) {
+  if (allSolutions.length > 0) {
       return {
-          solution: finalSolution,
-          reasoning: "Successfully found a solution for all chains."
+          solutions: allSolutions,
+          reasoning: `Successfully found ${allSolutions.length} solution(s).`
       };
   } else {
       return {
-          solution: null,
+          solutions: [],
           reasoning: "Could not find a valid solution that satisfies all chain constraints."
       };
   }
