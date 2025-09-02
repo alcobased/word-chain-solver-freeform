@@ -620,10 +620,10 @@ export default function WordChainSolver() {
           <Input id="image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} ref={fileInputRef} />
         </div>
       </header>
-      <main className="relative flex-grow" onClick={handleContainerClick}>
+      <main className="relative flex-grow">
         {isClient && background.type === 'image' ? (
           <div className="absolute inset-0 p-2 sm:p-4">
-            <div className="relative h-full w-full">
+            <div className="relative h-full w-full" onClick={handleContainerClick}>
               <Image
                 ref={imageRef}
                 src={background.image.src}
@@ -668,7 +668,7 @@ export default function WordChainSolver() {
             </div>
           </div>
         ) : (
-          <div className="relative h-full w-full p-2 sm:p-4">
+          <div className="relative h-full w-full p-2 sm:p-4" onClick={handleContainerClick}>
              <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
              {Object.entries(circles).map(([id, circle]) => {
                 const isInActiveQueue = activeQueue.includes(id);
