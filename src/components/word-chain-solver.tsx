@@ -643,12 +643,12 @@ export default function WordChainSolver() {
                   key={id}
                   data-circle-id={id}
                   className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center font-bold text-white ring-2 ring-white",
                     {
-                      "border-accent ring-2 ring-white bg-accent": isSelected,
-                      "border-destructive ring-2 ring-white bg-destructive/70": !isSelected && clickCountInActiveQueue > 1,
-                      "border-primary ring-2 ring-white bg-primary/30": !isSelected && clickCountInActiveQueue === 1,
-                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue,
+                      'border-destructive bg-destructive': clickCountInActiveQueue > 1,
+                      'border-primary bg-primary': clickCountInActiveQueue === 1,
+                      'border-gray-400 bg-gray-400': !isInActiveQueue,
+                      'opacity-50': !isSelected,
                     }
                   )}
                   style={{
@@ -680,12 +680,12 @@ export default function WordChainSolver() {
                   key={id}
                   data-circle-id={id}
                   className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center font-bold text-white ring-2 ring-white",
                     {
-                      "border-accent ring-2 ring-white bg-accent": isSelected,
-                      "border-destructive ring-2 ring-white bg-destructive/70": !isSelected && clickCountInActiveQueue > 1,
-                      "border-primary ring-2 ring-white bg-primary/30": !isSelected && clickCountInActiveQueue === 1,
-                      "border-gray-400 opacity-60": !isSelected && !isInActiveQueue,
+                      'border-destructive bg-destructive': clickCountInActiveQueue > 1,
+                      'border-primary bg-primary': clickCountInActiveQueue === 1,
+                      'border-gray-400 bg-gray-400': !isInActiveQueue,
+                      'opacity-50': !isSelected,
                     }
                   )}
                   style={{
