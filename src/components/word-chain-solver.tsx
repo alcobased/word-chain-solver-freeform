@@ -207,8 +207,22 @@ export default function WordChainSolver() {
   
   const handleCircleClick = (e: MouseEvent, clickedCircleId: string) => {
     e.stopPropagation(); // Prevent handleContainerClick from firing.
-    setSelectedCircleId(clickedCircleId);
+
+    if (selectedCircleId === clickedCircleId) {
+        // This is the second click on an already-selected circle.
+        // Add it to the active queue to allow chains to cross over.
+        if (activeChainId) {
+            setQueues(prevQueues => ({
+                ...prevQueues,
+                [activeChainId]: [...(prevQueues[activeChainId] ?? []), clickedCircleId]
+            }));
+        }
+    } else {
+        // This is the first click, so just select it for editing.
+        setSelectedCircleId(clickedCircleId);
+    }
   };
+
 
   const handleClear = (clearBackground: boolean = true) => {
     if(clearBackground) setBackground({ type: 'grid' });
@@ -258,13 +272,20 @@ export default function WordChainSolver() {
         setSelectedCircleId(null);
     }
     
-    // The circle was just created by a click, so we should remove it.
-    // If we change the logic to allow adding existing circles to a queue, this needs adjustment.
-    setCircles(prevCircles => {
-        const newCircles = { ...prevCircles };
-        delete newCircles[lastClickedId];
-        return newCircles;
+    // Check if the circle is used in any other queue or in the current queue after undo
+    const isUsedElsewhere = Object.values(queues).flat().some((id, index) => {
+        // Exclude the very last element we are about to remove
+        if (index === Object.values(queues).flat().length - 1) return false;
+        return id === lastClickedId;
     });
+
+    if (!isUsedElsewhere) {
+        setCircles(prevCircles => {
+            const newCircles = { ...prevCircles };
+            delete newCircles[lastClickedId];
+            return newCircles;
+        });
+    }
   };
 
   const processWordList = () => {
