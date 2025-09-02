@@ -401,7 +401,11 @@ export default function WordChainSolver() {
             }
           });
           setCircles(updatedCircles);
-          toast({ title: "Solution Found!", description: result.reasoning });
+
+          const title = results.length === 1 ? "Unique Solution Found!" : "Solution Found!";
+          const description = results.length > 1 ? `Found ${results.length - 1} alternative solution(s). ${result.reasoning}` : result.reasoning;
+          toast({ title, description });
+
         } else {
           toast({ variant: "destructive", title: "No Solution Found", description: "No valid word chain found." });
         }
@@ -420,9 +424,12 @@ export default function WordChainSolver() {
                   });
               }
           });
-
           setCircles(updatedCircles);
-          toast({ title: "Solution Found!", description: result.reasoning });
+
+          const title = result.solutions.length === 1 ? "Unique Solution Set Found!" : "Solution Set Found!";
+          const description = result.solutions.length > 1 ? `Found ${result.solutions.length - 1} alternative solution set(s). ${result.reasoning}`: result.reasoning;
+          toast({ title, description });
+
         } else {
           toast({ variant: "destructive", title: "No Solution Found", description: result.reasoning });
         }
@@ -731,3 +738,5 @@ export default function WordChainSolver() {
     </div>
   );
 }
+
+    
