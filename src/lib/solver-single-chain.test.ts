@@ -1,7 +1,7 @@
 
 
-import { generateConnections, solveSingleChain, solveMultiChain } from './solver';
-import type { Circles, Queues } from '@/components/word-chain-solver';
+import { generateConnections, solveSingleChain } from './solver';
+import type { Circles } from '@/components/word-chain-solver';
 
 describe('generateConnections', () => {
     it('should generate correct connections from a word list', () => {
