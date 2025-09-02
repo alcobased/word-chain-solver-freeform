@@ -34,9 +34,8 @@ describe('solveMultiChain', () => {
     it('should solve for two separate chains, "MASTAND" and "SPEEDGEAR"', () => {
         const result = solveMultiChain(queues, circles, words, connections);
 
-        expect(result.solution).not.toBeNull();
-        
-        const solution = result.solution as MultiSolution;
+        expect(result.solutions).toHaveLength(1);
+        const solution = result.solutions[0];
         
         expect(solution.chain1.solution).toEqual(['MAST', 'STAND']);
         expect(solution.chain1.chain).toEqual('MASTAND');
@@ -44,7 +43,7 @@ describe('solveMultiChain', () => {
         expect(solution.chain2.solution).toEqual(['SPEED', 'EDGE', 'GEAR']);
         expect(solution.chain2.chain).toEqual('SPEEDGEAR');
 
-        expect(result.reasoning).toContain('Successfully found a solution');
+        expect(result.reasoning).toContain('Successfully found 1 solution(s)');
     });
   });
 
