@@ -78,6 +78,7 @@ export default function WordChainSolver() {
   const [circles, setCircles] = useState<Circles>({});
   const [queues, setQueues] = useState<Queues>({ [SINGLE_CHAIN_ID]: [] });
   const [activeChainId, setActiveChainId] = useState<string | null>(SINGLE_CHAIN_ID);
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("single");
   const [markerSize, setMarkerSize] = useState<number>(16);
   const [wordList, setWordList] = useState<string>("");
@@ -163,6 +164,12 @@ export default function WordChainSolver() {
     if ((e.target as HTMLElement).closest('[data-circle-id]')) {
       return;
     }
+    
+    // Deselect circle if clicking on the background
+    if (selectedCircleId) {
+        setSelectedCircleId(null);
+        return;
+    }
 
     const container = e.currentTarget;
     if (!container || !activeChainId) return;
@@ -196,10 +203,13 @@ export default function WordChainSolver() {
         ...prevQueues,
         [activeChainId]: [...(prevQueues[activeChainId] ?? []), newCircleId]
     }));
+    setSelectedCircleId(newCircleId);
   };
   
   const handleCircleClick = (clickedCircleId: string) => {
     if (!activeChainId) return;
+    
+    setSelectedCircleId(clickedCircleId);
 
     const clickCountInActiveQueue = (queues[activeChainId] ?? []).filter(id => id === clickedCircleId).length;
     if (clickCountInActiveQueue < 2) {
@@ -215,6 +225,7 @@ export default function WordChainSolver() {
     setCircles({});
     setQueues({ [SINGLE_CHAIN_ID]: [] });
     setActiveChainId(SINGLE_CHAIN_ID);
+    setSelectedCircleId(null);
     setMode("single");
     setWordList("");
     setWordConnections({});
@@ -228,15 +239,14 @@ export default function WordChainSolver() {
   };
 
   const handleCharChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (activeQueue.length === 0) return;
+    if (!selectedCircleId) return;
 
-    const lastClickedId = activeQueue[activeQueue.length - 1];
     const newChar = e.target.value.toUpperCase().slice(0, 1);
 
     setCircles(prev => ({
         ...prev,
-        [lastClickedId]: {
-            ...prev[lastClickedId],
+        [selectedCircleId]: {
+            ...prev[selectedCircleId],
             char: newChar
         }
     }))
@@ -252,6 +262,10 @@ export default function WordChainSolver() {
         ...prevQueues,
         [activeChainId]: newActiveQueue
     }));
+    
+    if (selectedCircleId === lastClickedId) {
+        setSelectedCircleId(newActiveQueue.length > 0 ? newActiveQueue[newActiveQueue.length - 1] : null);
+    }
 
     // Check if the removed circle is part of any other queue
     const isCircleUsedElsewhere = Object.values(queues).some(q => q.includes(lastClickedId));
@@ -326,6 +340,7 @@ export default function WordChainSolver() {
             setMarkerSize(loadedState.markerSize);
             setWordList(loadedState.wordList);
             setWordConnections(loadedState.wordConnections);
+            setSelectedCircleId(null);
           } else {
             console.error("Invalid state file format.");
             alert("Invalid state file format.");
@@ -391,10 +406,10 @@ export default function WordChainSolver() {
         }
       } else { // Multi-chain mode
         const result = solveMultiChain(queues, circles, words, wordConnections);
-        if (result.solution) {
+        if (result.solutions) {
           const updatedCircles = { ...circles };
-          Object.values(result.solution).forEach(({ chain: solutionString }, i) => {
-            const chainId = Object.keys(result.solution!)[i];
+          Object.values(result.solutions).forEach(({ chain: solutionString }, i) => {
+            const chainId = Object.keys(result.solutions!)[i];
             const queue = queues[chainId];
             queue.forEach((circleId, index) => {
                 if (index < solutionString.length && updatedCircles[circleId]) {
@@ -462,8 +477,7 @@ export default function WordChainSolver() {
     setActiveChainId(Object.keys(newQueues)[0] ?? null);
   }
 
-  const lastClickedId = activeQueue.length > 0 ? activeQueue[activeQueue.length - 1] : null;
-  const lastCircleChar = lastClickedId ? circles[lastClickedId]?.char : '';
+  const selectedCircleChar = selectedCircleId ? circles[selectedCircleId]?.char : '';
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -574,10 +588,10 @@ export default function WordChainSolver() {
                     <Label htmlFor="marker-char">Marker Character</Label>
                     <Input id="marker-char" 
                         maxLength={1}
-                        value={lastCircleChar || ''}
+                        value={selectedCircleChar || ''}
                         onChange={handleCharChange}
-                        disabled={activeQueue.length === 0}
-                        placeholder="Set for last marker"
+                        disabled={!selectedCircleId}
+                        placeholder={selectedCircleId ? "Set character" : "Select marker"}
                     />
                 </div>
                 <Button onClick={handleUndoClick} variant="outline" size="sm" disabled={activeQueue.length === 0}>
@@ -618,6 +632,7 @@ export default function WordChainSolver() {
               {Object.entries(circles).map(([id, circle]) => {
                 const isInActiveQueue = activeQueue.includes(id);
                 const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
+                const isSelected = selectedCircleId === id;
 
                 return (
                 <div
@@ -625,8 +640,9 @@ export default function WordChainSolver() {
                   data-circle-id={id}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                    isSelected ? "border-accent ring-2 ring-white bg-accent" :
                     isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
-                    isInActiveQueue && (clickCountInActiveQueue > 1 ? "bg-accent" : "bg-primary/30")
+                    isInActiveQueue && !isSelected && (clickCountInActiveQueue > 1 ? "bg-accent/70" : "bg-primary/30")
                   )}
                   style={{
                     left: `${circle.x * 100}%`,
@@ -653,6 +669,7 @@ export default function WordChainSolver() {
              {Object.entries(circles).map(([id, circle]) => {
                 const isInActiveQueue = activeQueue.includes(id);
                 const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
+                const isSelected = selectedCircleId === id;
 
                 return (
                 <div
@@ -660,8 +677,9 @@ export default function WordChainSolver() {
                   data-circle-id={id}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center text-white font-bold",
+                     isSelected ? "border-accent ring-2 ring-white bg-accent" :
                     isInActiveQueue ? "border-primary ring-2 ring-white" : "border-gray-400 opacity-60",
-                    isInActiveQueue && (clickCountInActiveQueue > 1 ? "bg-accent" : "bg-primary/30")
+                    isInActiveQueue && !isSelected && (clickCountInActiveQueue > 1 ? "bg-accent/70" : "bg-primary/30")
                   )}
                   style={{
                     left: `${circle.x * 100}%`,
