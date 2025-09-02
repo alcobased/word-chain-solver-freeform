@@ -45,6 +45,20 @@ describe('solveMultiChain', () => {
 
         expect(result.reasoning).toContain('Successfully found 1 solution(s)');
     });
+
+    it('should find all possible solutions when multiple words are valid', () => {
+      const extraWords = 'CAST STEED GREED';
+      const extendedWordList = [...words, ...extraWords.split(' ')];
+      const extendedConnections = generateConnections(extendedWordList.join(' '));
+
+      const result = solveMultiChain(queues, circles, extendedWordList, extendedConnections);
+
+      // Chain 1 has 2 options: MAST, CAST -> 2
+      // Chain 2 has 2 heads (SPEED, STEED) and 2 tails (GEAR, GREED) -> 2 * 2 = 4
+      // Total combinations = 2 * 4 = 8
+      expect(result.solutions.length).toBe(8);
+      expect(result.reasoning).toContain('Successfully found 8 solution(s)');
+    });
   });
 
 });
