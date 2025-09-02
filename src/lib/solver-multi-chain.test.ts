@@ -48,7 +48,7 @@ describe('solveMultiChain', () => {
     });
     
     it('should find all possible solutions when multiple words are valid', () => {
-      const extraWords = 'POST CAST GEMS GERM';
+      const extraWords = 'POST CAST GEMS GERM'.toUpperCase();
       const extendedWordList = words.join(' ') + ' ' + extraWords;
       const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
       const extendedConnections = generateConnections(extendedWordList);
@@ -56,6 +56,48 @@ describe('solveMultiChain', () => {
       const result = solveMultiChain(queues, circles, extendedWords, extendedConnections);
       
       expect(result.solutions).toHaveLength(9);
+    });
+
+    it('should return no solutions if one chain is unsolvable', () => {
+        const unsolvableQueues = { ...queues, chain1: ['c0', 'c1'] }; // Length 2 is impossible
+        const result = solveMultiChain(unsolvableQueues, circles, words, connections);
+        expect(result.solutions).toHaveLength(0);
+        expect(result.reasoning).toContain('Could not find a valid solution');
+    });
+
+    it('should respect pre-filled character constraints', () => {
+        circles['c0'] = { ...circles['c0'], char: 'M' }; // First char of chain1 must be 'M'
+        
+        const extraWords = 'CAST STEED';
+        const extendedWordList = words.join(' ') + ' ' + extraWords;
+        const extendedWords = extendedWordList.split(/\s+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+        const extendedConnections = generateConnections(extendedWordList);
+        
+        const result = solveMultiChain(queues, circles, extendedWords, extendedConnections);
+        
+        // Solutions for chain1 can only be MASTAND or MASTEED (2)
+        // Solutions for chain2 can be SPEEDGEAR or STEEDGEAR (2)
+        // But MASTEED and STEEDGEAR can't be in the same solution.
+        // MASTAND -> SPEEDGEAR
+        // MASTAND -> STEEDGEAR
+        // MASTEED -> SPEEDGEAR
+        // Total should be 3
+        expect(result.solutions).toHaveLength(3);
+        result.solutions.forEach(solutionSet => {
+            expect(solutionSet.chain1.chain.startsWith('M')).toBe(true);
+        });
+    });
+
+    it('should handle an empty chain gracefully', () => {
+        const queuesWithEmpty = { ...queues, chain3: [] };
+        const result = solveMultiChain(queuesWithEmpty, circles, words, connections);
+
+        // Should still find the one solution for chain1 and chain2
+        expect(result.solutions).toHaveLength(1);
+        expect(result.solutions[0].chain1.chain).toEqual('MASTAND');
+        expect(result.solutions[0].chain2.chain).toEqual('SPEEDGEAR');
+        // Ensure chain3 is not in the solution
+        expect(result.solutions[0].chain3).toBeUndefined();
     });
   });
 
