@@ -564,16 +564,12 @@ export default function WordChainSolver() {
                 <Wand2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{isSolving ? "Solving..." : "Find Solution"}</span>
             </Button>
-            <Button onClick={() => setIsSaveDialogOpen(true)} variant="outline" size="sm">
-                <Save className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Save</span>
+            <Button onClick={() => setIsSaveDialogOpen(true)} variant="outline" size="icon">
+                <Save className="h-4 w-4" />
             </Button>
             <Label htmlFor="load-state-input" className="cursor-pointer">
-                <Button asChild variant="outline" size="sm">
-                    <div className="flex items-center">
-                        <FolderOpen className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm-inline">Load</span>
-                    </div>
+                <Button asChild variant="outline" size="icon">
+                    <FolderOpen className="h-4 w-4" />
                 </Button>
             </Label>
             <Input id="load-state-input" type="file" accept=".json" className="hidden" onChange={handleLoadState} ref={loadStateInputRef} />
@@ -690,23 +686,25 @@ export default function WordChainSolver() {
       </header>
       <main className="relative flex-grow">
         <div className="absolute inset-0 p-2 sm:p-4" onClick={handleContainerClick}>
-            {isClient && background.type === 'image' ? (
-              <div className="relative h-full w-full">
-                <Image
-                  ref={imageRef}
-                  src={background.image.src}
-                  width={background.image.width}
-                  height={background.image.height}
-                  alt="Uploaded content for marking"
-                  className="h-full w-full select-none object-contain drop-shadow-lg"
-                  priority
-                />
-              </div>
-            ) : (
-                <div className="relative h-full w-full">
-                    <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
-                </div>
-            )}
+            <div className="relative h-full w-full" onClick={handleContainerClick}>
+                {isClient && background.type === 'image' ? (
+                  <div className="relative h-full w-full">
+                    <Image
+                      ref={imageRef}
+                      src={background.image.src}
+                      width={background.image.width}
+                      height={background.image.height}
+                      alt="Uploaded content for marking"
+                      className="h-full w-full select-none object-contain drop-shadow-lg"
+                      priority
+                    />
+                  </div>
+                ) : (
+                    <div className="relative h-full w-full">
+                        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
+                    </div>
+                )}
+            </div>
             {isClient && Object.entries(circles).map(([id, circle]) => {
             const isInActiveQueue = activeQueue.includes(id);
             const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
@@ -767,4 +765,5 @@ export default function WordChainSolver() {
     </div>
   );
 }
+
 
