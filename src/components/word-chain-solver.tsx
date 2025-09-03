@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Undo2, BookText, Save, FolderOpen, Wand2, Plus, Trash2 } from "lucide-react";
+import { UploadCloud, X, Undo2, BookText, Save, FolderOpen, Wand2, Plus, Trash2, ImageOff } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
@@ -230,6 +230,13 @@ export default function WordChainSolver() {
         fileInputRef.current.value = "";
     }
   };
+
+  const handleRemoveImage = () => {
+    setBackground({ type: 'grid' });
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  }
   
   const handleMarkerSizeChange = (value: number[]) => {
     setMarkerSize(value[0]);
@@ -565,7 +572,7 @@ export default function WordChainSolver() {
                 <Button asChild variant="outline" size="sm">
                     <div className="flex items-center">
                         <FolderOpen className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Load</span>
+                        <span className="hidden sm-inline">Load</span>
                     </div>
                 </Button>
             </Label>
@@ -664,6 +671,12 @@ export default function WordChainSolver() {
             <X className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Clear</span>
           </Button>
+           {background.type === 'image' && (
+              <Button onClick={handleRemoveImage} variant="outline" size="sm">
+                <ImageOff className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Remove Image</span>
+              </Button>
+           )}
           <Label htmlFor="image-upload" className="cursor-pointer">
             <Button asChild variant="default">
               <div className="flex items-center">
@@ -676,89 +689,57 @@ export default function WordChainSolver() {
         </div>
       </header>
       <main className="relative flex-grow">
-        {isClient && background.type === 'image' ? (
-          <div className="absolute inset-0 p-2 sm:p-4">
-            <div className="relative h-full w-full" onClick={handleContainerClick}>
-              <Image
-                ref={imageRef}
-                src={background.image.src}
-                width={background.image.width}
-                height={background.image.height}
-                alt="Uploaded content for marking"
-                className="h-full w-full select-none object-contain drop-shadow-lg"
-                priority
-              />
-              {Object.entries(circles).map(([id, circle]) => {
-                const isInActiveQueue = activeQueue.includes(id);
-                const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
-                const isSelected = selectedCircleId === id;
-
-                return (
-                <div
-                  key={id}
-                  data-circle-id={id}
-                  className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center font-bold text-white ring-2 ring-white",
-                    {
-                      'border-destructive bg-destructive': clickCountInActiveQueue > 1,
-                      'border-primary bg-primary': clickCountInActiveQueue === 1,
-                      'border-gray-400 bg-gray-400': !isInActiveQueue,
-                      'opacity-50': !isSelected,
-                    }
-                  )}
-                  style={{
-                    left: `${circle.x * 100}%`,
-                    top: `${circle.y * 100}%`,
-                    width: `${markerSize}px`,
-                    height: `${markerSize}px`,
-                    fontSize: `${markerSize * 0.6}px`,
-                    zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
-                  }}
-                  onClick={(e) => handleCircleClick(e, id)}
-                  aria-hidden="true"
-                >
-                  {circle.char}
+        <div className="absolute inset-0 p-2 sm:p-4" onClick={handleContainerClick}>
+            {isClient && background.type === 'image' ? (
+              <div className="relative h-full w-full">
+                <Image
+                  ref={imageRef}
+                  src={background.image.src}
+                  width={background.image.width}
+                  height={background.image.height}
+                  alt="Uploaded content for marking"
+                  className="h-full w-full select-none object-contain drop-shadow-lg"
+                  priority
+                />
+              </div>
+            ) : (
+                <div className="relative h-full w-full">
+                    <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
                 </div>
-              )})}
+            )}
+            {isClient && Object.entries(circles).map(([id, circle]) => {
+            const isInActiveQueue = activeQueue.includes(id);
+            const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
+            const isSelected = selectedCircleId === id;
+
+            return (
+            <div
+                key={id}
+                data-circle-id={id}
+                className={cn(
+                "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center font-bold text-white ring-2 ring-white",
+                {
+                    'border-destructive bg-destructive': clickCountInActiveQueue > 1,
+                    'border-primary bg-primary': clickCountInActiveQueue === 1,
+                    'border-gray-400 bg-gray-400': !isInActiveQueue,
+                    'opacity-50': !isSelected,
+                }
+                )}
+                style={{
+                left: `${circle.x * 100}%`,
+                top: `${circle.y * 100}%`,
+                width: `${markerSize}px`,
+                height: `${markerSize}px`,
+                fontSize: `${markerSize * 0.6}px`,
+                zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
+                }}
+                onClick={(e) => handleCircleClick(e, id)}
+                aria-hidden="true"
+            >
+                {circle.char}
             </div>
-          </div>
-        ) : (
-          <div className="relative h-full w-full p-2 sm:p-4" onClick={handleContainerClick}>
-             <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(to_bottom,white,transparent)] dark:bg-grid-slate-700/60"></div>
-             {Object.entries(circles).map(([id, circle]) => {
-                const isInActiveQueue = activeQueue.includes(id);
-                const clickCountInActiveQueue = activeQueue.filter(qId => qId === id).length;
-                const isSelected = selectedCircleId === id;
-
-                return (
-                <div
-                  key={id}
-                  data-circle-id={id}
-                  className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 flex items-center justify-center font-bold text-white ring-2 ring-white",
-                    {
-                      'border-destructive bg-destructive': clickCountInActiveQueue > 1,
-                      'border-primary bg-primary': clickCountInActiveQueue === 1,
-                      'border-gray-400 bg-gray-400': !isInActiveQueue,
-                      'opacity-50': !isSelected,
-                    }
-                  )}
-                  style={{
-                    left: `${circle.x * 100}%`,
-                    top: `${circle.y * 100}%`,
-                    width: `${markerSize}px`,
-                    height: `${markerSize}px`,
-                    fontSize: `${markerSize * 0.6}px`,
-                    zIndex: 10 + (activeQueue.indexOf(id) ?? -1)
-                  }}
-                  onClick={(e) => handleCircleClick(e, id)}
-                  aria-hidden="true"
-                >
-                  {circle.char}
-                </div>
-              )})}
-          </div>
-        )}
+            )})}
+        </div>
       </main>
       <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
         <AlertDialogContent className="z-[201]">
@@ -786,3 +767,4 @@ export default function WordChainSolver() {
     </div>
   );
 }
+
